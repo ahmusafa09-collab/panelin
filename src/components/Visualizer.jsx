@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export default function Visualizer({
   activeProduct,
   lebar,
@@ -8,6 +10,11 @@ export default function Visualizer({
   centerWidth = 1.2,
   centerHeight = 2.0,
 }) {
+  // Toggle internal untuk menampilkan/menyembunyikan furnitur Ruang TV
+  const [showTvRoom, setShowTvRoom] = useState(true);
+
+  if (!activeProduct) return null;
+
   const {
     kategori,
     satuan,
@@ -51,11 +58,10 @@ export default function Visualizer({
     ? Math.max((tinggiValid - effectiveCenterHeight) / 2, 0)
     : 0;
 
-  // Persentase dimensi kotak tengah terhadap dinding
   const centerWidthPct = lebarValid > 0 ? (effectiveCenterWidth / lebarValid) * 100 : 0;
   const centerHeightPct = tinggiValid > 0 ? (effectiveCenterHeight / tinggiValid) * 100 : 0;
+  const sideWidthPct = lebarValid > 0 ? (sideWidth / lebarValid) * 100 : 0;
 
-  // Skala tile produk tengah relatif terhadap ukuran kotak tengah
   const centerPanelMeter = centerProduct ? centerProduct.dimensi.lebar_cm / 100 : 1.2;
   const centerPanelHeightMeter = centerProduct ? centerProduct.dimensi.tinggi_cm / 100 : 2.9;
   const centerTileWidthPct =
@@ -70,171 +76,258 @@ export default function Visualizer({
   const horizontalSeamPosBottom =
     isTinggiLebih && tinggiValid > 0 ? (tinggiPanelMeter / tinggiValid) * 100 : 100;
 
-  const labelKategori = `${kategori} (${lebarPanelCm} cm)`;
-
   return (
-    <div className="w-full flex flex-col items-center justify-center select-none">
-      {/* ── Header di atas preview ── */}
-      <div className="flex flex-wrap items-center justify-between w-full max-w-lg mb-2 text-xs font-semibold text-gray-600 px-1 gap-2">
-        <span>
-          Dinding: <strong className="text-gray-900">{lebarValid}m (L) × {tinggiValid}m (T)</strong>
-        </span>
-        <span className="bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
+    <div className="w-full flex flex-col items-center justify-center select-none py-2">
+      {/* ── Bar Kontrol Atas (Info Material & Toggle Simulasi Ruang TV) ── */}
+      <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-2 mb-4 px-2">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs" />
           {activeMix ? (
-            <>
-              {isFrameMode ? 'Bingkai 4 Sisi: ' : 'Sayap Kiri-Kanan: '}
-              <strong className="text-blue-600">{activeProduct.kode}</strong>
+            <span className="text-stone-700 font-medium">
+              Kombinasi{' '}
+              <strong className="text-stone-900">{activeProduct.kode}</strong>
               {' + '}
-              <strong className="text-amber-600">{centerProduct.kode}</strong>
-            </>
+              <strong className="text-amber-700">{centerProduct.kode}</strong>
+            </span>
           ) : (
-            <>
-              Panel:{' '}
-              <strong className="text-blue-600">{lebarPanelCm}cm × {tinggiPanelCm}cm</strong>
-              {' · '}
-              <span className="text-gray-500">{labelKategori}</span>
-            </>
+            <span className="text-stone-700 font-medium">
+              <strong className="text-stone-900">{activeProduct.nama}</strong>{' '}
+              <span className="text-stone-400">
+                ({lebarPanelCm}×{tinggiPanelCm} cm · {totalLajur} {satuan})
+              </span>
+            </span>
           )}
-        </span>
+        </div>
+
+        {/* Tombol Toggle Simulasi Ruang TV */}
+        <button
+          type="button"
+          onClick={() => setShowTvRoom((prev) => !prev)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer shadow-2xs ${
+            showTvRoom
+              ? 'bg-stone-900 text-amber-300 border-stone-800 hover:bg-stone-800'
+              : 'bg-white text-stone-600 border-stone-300 hover:bg-stone-50'
+          }`}
+        >
+          <span>{showTvRoom ? '📺' : '🖼️'}</span>
+          <span>{showTvRoom ? 'Ruang TV: Aktif' : 'Tampilkan Ruang TV'}</span>
+        </button>
       </div>
 
-      {/* ── Bingkai Dinding Preview ── */}
-      <div
-        className="w-full max-w-lg max-h-[420px] border-4 border-gray-800 rounded-lg shadow-2xl overflow-hidden relative bg-white transition-all duration-300"
-        style={{ aspectRatio: `${aspectRatio}` }}
-      >
+      {/* ── Area Simulasi Ruangan + Garis Dimensi Arsitektur ── */}
+      <div className="w-full max-w-xl px-4 sm:px-8 flex flex-col items-center">
+        {/* Garis Dimensi Lebar Atas (Khusus Mode Mix: Kiri - Tengah - Kanan) */}
         {activeMix ? (
-          /* ================= TAMPILAN MODE MIX (BERDIRI VERTIKAL) ================= */
-          <div
-            className="w-full h-full relative flex items-center justify-center"
-            style={{
-              backgroundImage: `url(${gambarPanel})`,
-              backgroundRepeat: 'repeat',
-              backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
-              backgroundPosition: 'left bottom',
-            }}
-          >
-            {/* Label Dimensi Bingkai Atas & Bawah (Khusus Pola Frame 4 Sisi) */}
-            {isFrameMode && topBottomHeight > 0 && (
-              <>
-                <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[9px] px-2 py-0.5 rounded shadow">
-                  Bingkai Atas: {topBottomHeight.toFixed(2)}m (Vertikal)
+          <div className="w-full flex items-center text-[10px] font-mono text-stone-600 mb-1.5 px-0.5">
+            {sideWidthPct > 0 && (
+              <div
+                style={{ width: `${sideWidthPct}%` }}
+                className="flex items-center justify-center border-x border-stone-400 relative"
+              >
+                <div className="w-full border-b border-dashed border-stone-400 absolute" />
+                <span className="bg-stone-100 px-1 relative z-10 text-stone-600">
+                  {sideWidth.toFixed(2)}m
                 </span>
-                <span className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[9px] px-2 py-0.5 rounded shadow">
-                  Bingkai Bawah: {topBottomHeight.toFixed(2)}m
-                </span>
-              </>
+              </div>
             )}
-
-            {/* Label Dimensi Sisi Kiri & Kanan */}
-            {sideWidth > 0 && (
-              <>
-                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded shadow">
-                  Kiri {sideWidth.toFixed(2)}m
-                </span>
-                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded shadow">
-                  Kanan {sideWidth.toFixed(2)}m
-                </span>
-              </>
-            )}
-
-            {/* Panel Fokus Tengah (UV Marble) */}
             <div
-              className={`relative shadow-xl transition-all duration-300 ${
-                isFrameMode
-                  ? 'border-2 border-gray-900/85 rounded-xs'
-                  : 'border-x-2 border-gray-900/85'
-              }`}
-              style={{
-                width: `${centerWidthPct}%`,
-                height: `${centerHeightPct}%`,
-                backgroundImage: `url(${centerProduct.gambar2D})`,
-                backgroundRepeat: 'repeat',
-                backgroundSize: `${centerTileWidthPct}% ${centerTileHeightPct}%`,
-                backgroundPosition: 'center bottom',
-              }}
+              style={{ width: `${centerWidthPct}%` }}
+              className="flex items-center justify-center border-x border-amber-600 relative"
             >
-              <span className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-amber-600/95 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow whitespace-nowrap">
-                {centerProduct.kode} ({effectiveCenterWidth}m × {effectiveCenterHeight}m)
+              <div className="w-full border-b border-amber-600 absolute" />
+              <span className="bg-stone-100 px-1.5 relative z-10 font-bold text-amber-700">
+                {effectiveCenterWidth}m
               </span>
             </div>
-
-            {/* Sambungan Horizontal (> 2.9m) */}
-            {isTinggiLebih && (
+            {sideWidthPct > 0 && (
               <div
-                className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
-                style={{ bottom: `${horizontalSeamPosBottom}%` }}
+                style={{ width: `${sideWidthPct}%` }}
+                className="flex items-center justify-center border-x border-stone-400 relative"
               >
-                <div className="w-full border-b-2 border-dashed border-amber-500" />
-                <span className="absolute right-2 -top-4 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                  Sambungan Horizontal ({tinggiPanelMeter}m)
-                </span>
-              </div>
-            )}
-          </div>
-        ) : gambarPanel ? (
-          /* ================= TAMPILAN MODE TUNGGAL (1 PRODUK) ================= */
-          <div
-            className="w-full h-full relative"
-            style={{
-              backgroundImage: `url(${gambarPanel})`,
-              backgroundRepeat: 'repeat',
-              backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
-              backgroundPosition: 'left bottom',
-            }}
-          >
-            {verticalSeams.map(({ pos, nomor }) => (
-              <div
-                key={nomor}
-                className="absolute top-0 bottom-0 pointer-events-none flex flex-col items-center"
-                style={{ left: `${pos}%` }}
-              >
-                <div className="w-[1.5px] h-full bg-black/45 shadow-[0_0_2px_rgba(255,255,255,0.6)]" />
-                {lebarPanelCm >= 40 && (
-                  <span className="absolute top-1 -translate-x-1/2 bg-black/70 text-white text-[9px] px-1 py-0.5 rounded font-mono shadow">
-                    Nat {nomor}
-                  </span>
-                )}
-              </div>
-            ))}
-
-            {isTinggiLebih && (
-              <div
-                className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
-                style={{ bottom: `${horizontalSeamPosBottom}%` }}
-              >
-                <div className="w-full border-b-2 border-dashed border-amber-500 shadow-2xs" />
-                <span className="absolute right-2 -top-4 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-                  Sambungan Horizontal ({tinggiPanelMeter}m)
+                <div className="w-full border-b border-dashed border-stone-400 absolute" />
+                <span className="bg-stone-100 px-1 relative z-10 text-stone-600">
+                  {sideWidth.toFixed(2)}m
                 </span>
               </div>
             )}
           </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            Pilih produk
+          /* Garis Dimensi Lebar Total Atas (Mode Tunggal) */
+          <div className="w-full flex items-center justify-center border-x border-stone-400 text-[11px] font-mono text-stone-700 mb-1.5 relative">
+            <div className="w-full border-b border-stone-400 absolute" />
+            <span className="bg-stone-100 px-2 relative z-10 font-semibold">
+              Lebar Dinding: {lebarValid} m
+            </span>
           </div>
         )}
 
-        {/* ── Badge Pojok Kanan Bawah ── */}
-        <div className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] px-2.5 py-1 rounded backdrop-blur-xs shadow flex flex-col items-end gap-0.5 z-20">
-          {activeMix ? (
-            <>
-              <span className="font-semibold text-amber-300">
-                {isFrameMode ? 'Bingkai 4 Sisi (Vertikal)' : 'Sayap Kiri–Kanan'}
+        {/* Baris Tengah: Bingkai Ruangan + Garis Tinggi Kanan */}
+        <div className="w-full flex items-stretch justify-center relative">
+          {/* ══════════ KOTAK SIMULASI RUANGAN REALISTIS ══════════ */}
+          <div className="w-full rounded-xl overflow-hidden shadow-[0_20px_45px_-12px_rgba(0,0,0,0.35)] border border-stone-300 bg-stone-900 flex flex-col">
+            {/* 1. Plafon & Lis Atas */}
+            <div className="h-3.5 w-full bg-gradient-to-b from-stone-200 to-stone-300 border-b border-stone-400/60 relative flex items-center justify-around">
+              {/* Titik lampu downlight */}
+              <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
+              <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
+              <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
+            </div>
+
+            {/* 2. Bidang Dinding Utama */}
+            <div
+              className="w-full max-h-[390px] relative overflow-hidden bg-stone-200 transition-all duration-300"
+              style={{ aspectRatio: `${aspectRatio}` }}
+            >
+              {activeMix ? (
+                /* ─── RENDER MODE MIX (SAYAP / BINGKAI 4 SISI) ─── */
+                <div
+                  className="w-full h-full relative flex items-center justify-center"
+                  style={{
+                    backgroundImage: `url(${gambarPanel})`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
+                    backgroundPosition: 'left bottom',
+                  }}
+                >
+                  {/* Panel Fokus Tengah (UV Marble dengan efek timbul & trim halus) */}
+                  <div
+                    className={`relative transition-all duration-300 shadow-[0_10px_28px_rgba(0,0,0,0.55)] ${
+                      isFrameMode
+                        ? 'ring-2 ring-amber-400/80'
+                        : 'border-x-2 border-amber-400/80'
+                    }`}
+                    style={{
+                      width: `${centerWidthPct}%`,
+                      height: `${centerHeightPct}%`,
+                      backgroundImage: `url(${centerProduct.gambar2D})`,
+                      backgroundRepeat: 'repeat',
+                      backgroundSize: `${centerTileWidthPct}% ${centerTileHeightPct}%`,
+                      backgroundPosition: 'center bottom',
+                    }}
+                  >
+                    {/* Kilau halus pada permukaan UV Marble */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          'linear-gradient(125deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.12) 100%)',
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : gambarPanel ? (
+                /* ─── RENDER MODE TUNGGAL (1 PRODUK) ─── */
+                <div
+                  className="w-full h-full relative"
+                  style={{
+                    backgroundImage: `url(${gambarPanel})`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
+                    backgroundPosition: 'left bottom',
+                  }}
+                >
+                  {/* Garis Nat Vertikal Halus */}
+                  {verticalSeams.map(({ pos, nomor }) => (
+                    <div
+                      key={nomor}
+                      className="absolute top-0 bottom-0 pointer-events-none"
+                      style={{ left: `${pos}%` }}
+                    >
+                      <div className="w-[1px] h-full bg-black/30" />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Sambungan Horizontal (> 2.9m) dengan garis tipis elegan */}
+              {isTinggiLebih && (
+                <div
+                  className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
+                  style={{ bottom: `${horizontalSeamPosBottom}%` }}
+                >
+                  <div className="w-full border-b border-dashed border-amber-400/90 shadow-xs" />
+                  <span className="ml-2 -mt-4 bg-stone-900/80 text-amber-300 text-[9px] px-1.5 py-0.5 rounded backdrop-blur-xs">
+                    List H ({tinggiPanelMeter}m)
+                  </span>
+                </div>
+              )}
+
+              {/* ─── LAYER PENCAHAYAAN RUANGAN (DOWNLIGHT & AMBIENT SHADOW) ─── */}
+              <div
+                className="absolute inset-0 pointer-events-none z-10"
+                style={{
+                  background: `
+                    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(255, 244, 214, 0.28) 0%, transparent 75%),
+                    linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, transparent 10%, transparent 88%, rgba(0,0,0,0.32) 100%),
+                    linear-gradient(to right, rgba(0,0,0,0.2) 0%, transparent 6%, transparent 94%, rgba(0,0,0,0.2) 100%)
+                  `,
+                }}
+              />
+
+              {/* ─── LAYER SIMULASI FURNITUR RUANG TV (OPSIONAL) ─── */}
+              {showTvRoom && (
+                <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-end">
+                  {/* Layar TV Gantung + Backlight LED Hangat */}
+                  <div className="w-[44%] max-w-[230px] aspect-video mb-[11%] relative flex items-center justify-center">
+                    {/* Pendaran LED Backlight di belakang TV */}
+                    <div className="absolute -inset-2 bg-amber-300/35 blur-md rounded-lg" />
+                    {/* Bingkai Layar TV */}
+                    <div className="w-full h-full bg-gradient-to-tr from-stone-950 via-stone-900 to-stone-800 rounded-xs border-2 border-stone-700 shadow-[0_12px_24px_rgba(0,0,0,0.75)] relative overflow-hidden">
+                      {/* Refleksi layar kaca */}
+                      <div
+                        className="w-full h-full opacity-30"
+                        style={{
+                          background:
+                            'linear-gradient(115deg, rgba(255,255,255,0.35) 0%, transparent 45%)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Meja Konsol / Credenza TV Minimalis di Bawah */}
+                  <div className="w-[62%] max-w-[320px] h-[7%] min-h-[18px] bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-amber-400/40 shadow-[0_-4px_12px_rgba(0,0,0,0.45)] flex items-center justify-around px-3">
+                    <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                    <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Plint Lantai (Skirting) & Lantai Kayu */}
+            <div className="h-2 w-full bg-stone-800 border-t border-stone-600" />
+            <div
+              className="h-5 w-full relative"
+              style={{
+                background:
+                  'repeating-linear-gradient(90deg, #78553a 0px, #6b4930 48px, #5c3d26 49px, #78553a 96px)',
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-black/35 to-transparent" />
+            </div>
+          </div>
+
+          {/* ── Garis Dimensi Tinggi di Sisi Kanan Luar ── */}
+          <div className="hidden sm:flex flex-col items-center justify-center pl-2 text-[11px] font-mono text-stone-700 shrink-0">
+            <div className="h-full border-y border-stone-400 flex items-center justify-center relative px-1">
+              <div className="h-full border-r border-stone-400 absolute" />
+              <span className="bg-stone-100 py-1 px-1 relative z-10 font-semibold [writing-mode:vertical-rl] rotate-180">
+                Tinggi: {tinggiValid} m
               </span>
-              <span>
-                Bingkai {activeProduct.kategori} · Tengah {centerProduct.kategori}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="font-semibold text-amber-300">{labelKategori}</span>
-              <span>
-                {totalLajur} lajur {satuan} vertikal
-              </span>
-            </>
-          )}
+            </div>
+          </div>
+        </div>
+
+        {/* Keterangan Ringkas di Bawah Lantai */}
+        <div className="w-full flex flex-wrap items-center justify-between text-[11px] text-stone-500 mt-2.5 px-1 gap-2">
+          <span>
+            Bidang: <strong className="text-stone-700">{lebarValid}m × {tinggiValid}m</strong>
+            {isFrameMode && (
+              <> · Bingkai Sisi {sideWidth.toFixed(2)}m · Atas/Bawah {topBottomHeight.toFixed(2)}m</>
+            )}
+          </span>
+          <span className="text-stone-400">
+            *Simulasi pencahayaan & skala proporsional
+          </span>
         </div>
       </div>
     </div>
