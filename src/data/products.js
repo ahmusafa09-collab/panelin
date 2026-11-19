@@ -122,7 +122,7 @@ const daftarProdukMentah = [
   {
     tipe: "UVMarbleGold",
     kode: "80111",
-    motif: "Gold Series 8011",
+    motif: "Gold Series 80111",
     deskripsi: "Slab marmer PVC 120cm seri Gold mewah high gloss.",
   },
   {
