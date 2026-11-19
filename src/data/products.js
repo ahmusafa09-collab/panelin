@@ -8,6 +8,14 @@ const SPESIFIKASI_KATEGORI = {
     satuan: "batang",
     folderGambar: "/images/wpc",
   },
+  RFP: {
+    kategori: "RFP",
+    dimensi: { lebar_cm: 30, tinggi_cm: 290 },
+    luas_m2: 0.87,
+    harga: 79000,
+    satuan: "lembar",
+    folderGambar: "/images/rfp",
+  },
   Wallboard: {
     kategori: "Wallboard",
     dimensi: { lebar_cm: 40, tinggi_cm: 290 },
@@ -34,7 +42,7 @@ const SPESIFIKASI_KATEGORI = {
   },
 };
 
-// 2. Daftar seluruh produk (tinggal tambah 1 baris untuk motif baru)
+// 2. Daftar seluruh produk
 const daftarProdukMentah = [
   // --- WPC ---
   {
@@ -42,6 +50,44 @@ const daftarProdukMentah = [
     kode: "ZP06",
     motif: "Teak Wood 3D Fluted",
     deskripsi: "Panel kisi kayu komposit 16cm aksen 3D.",
+  },
+
+  // --- RFP (Lebar 30 cm × Tinggi 290 cm — Rp 79.000) ---
+  {
+    tipe: "RFP",
+    kode: "RFP21",
+    motif: "RFP Series 21",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
+  },
+  {
+    tipe: "RFP",
+    kode: "RFP22",
+    motif: "RFP Series 22",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
+  },
+  {
+    tipe: "RFP",
+    kode: "RFP23",
+    motif: "RFP Series 23",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
+  },
+  {
+    tipe: "RFP",
+    kode: "RFP24",
+    motif: "RFP Series 24",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
+  },
+  {
+    tipe: "RFP",
+    kode: "RFP25",
+    motif: "RFP Series 25",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
+  },
+  {
+    tipe: "RFP",
+    kode: "RFP26",
+    motif: "RFP Series 26",
+    deskripsi: "Panel dinding dekoratif lebar 30cm tinggi 290cm.",
   },
 
   // --- Wallboard ---
