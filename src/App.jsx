@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import catalogData from './data/products';
 import Visualizer from './components/Visualizer';
 import Calculator from './components/Calculator';
@@ -32,6 +32,18 @@ export default function App() {
 
   const [useListLWpc, setUseListLWpc] = useState(false);
   const [listLWpcQty, setListLWpcQty] = useState(2);
+
+  // State Sticky & Compact Preview khusus Mobile
+  const [isMobileSticky, setIsMobileSticky] = useState(true);
+  const [isMobileScrolled, setIsMobileScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsMobileScrolled(window.scrollY > 40);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Filter & pencarian katalog
   const [activeCategory, setActiveCategory] = useState('Semua');
@@ -109,20 +121,22 @@ export default function App() {
       maximumFractionDigits: 0,
     }).format(angka);
 
+  const isCompactMobile = isMobileSticky && isMobileScrolled;
+
   return (
     <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-stone-100 text-stone-800 flex flex-col font-sans">
       {/* ── HEADER SHOWROOM CHARCOAL & GOLD ── */}
       <header className="bg-stone-950 text-stone-100 border-b border-amber-500/20 sticky top-0 z-30 shrink-0 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <img
               src="/Iconpanel.png"
               alt="PANELIN Logo"
-              className="w-9 h-9 rounded-lg object-cover ring-1 ring-amber-400/50 shadow-sm"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover ring-1 ring-amber-400/50 shadow-sm"
             />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-wide text-white">
+                <h1 className="text-sm sm:text-lg font-bold tracking-wide text-white">
                   PANELIN
                 </h1>
                 <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/30 font-semibold">
@@ -135,8 +149,8 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-stone-900/90 border border-stone-800 px-3 py-1.5 rounded-full text-xs">
-            <span className="text-stone-400">Dinding:</span>
+          <div className="flex items-center gap-2 bg-stone-900/90 border border-stone-800 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs">
+            <span className="text-stone-400 hidden xs:inline">Dinding:</span>
             <span className="font-semibold text-amber-300">
               {lebar || 0}m × {tinggi || 0}m
             </span>
@@ -144,12 +158,20 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── KONTEN UTAMA (SPLIT SCROLL DI DESKTOP, STICKY PREVIEW DI HP) ── */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-5 flex-1 lg:overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
-          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK (SCROLL INDEPENDEN DI DESKTOP) */}
-          <div className="lg:col-span-7 flex flex-col gap-5 lg:h-full lg:overflow-y-auto lg:pr-2 pb-4">
-            <section className="sticky top-[57px] lg:static z-20 bg-white rounded-2xl border border-stone-200/90 shadow-md lg:shadow-xs p-3 sm:p-5">
+      {/* ── KONTEN UTAMA (SPLIT SCROLL DI DESKTOP, AUTO-COMPACT STICKY DI HP) ── */}
+      <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-5 flex-1 lg:overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 lg:gap-6 h-full">
+          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK */}
+          <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5 lg:h-full lg:overflow-y-auto lg:pr-2 pb-2 lg:pb-4">
+            <section
+              className={`${
+                isMobileSticky ? 'sticky top-[52px] sm:top-[58px]' : 'relative'
+              } lg:static z-20 bg-white rounded-2xl border border-stone-200/90 transition-all duration-300 ${
+                isCompactMobile
+                  ? 'p-2 sm:p-3 shadow-lg ring-1 ring-stone-900/5'
+                  : 'p-3 sm:p-5 shadow-md lg:shadow-xs'
+              }`}
+            >
               <Visualizer
                 activeProduct={selectedProduct}
                 lebar={lebar}
@@ -163,11 +185,14 @@ export default function App() {
                 useListH={useListH}
                 listHColor={listHColor}
                 useListLWpc={useListLWpc}
+                isCompact={isCompactMobile}
+                isMobileSticky={isMobileSticky}
+                onToggleMobileSticky={() => setIsMobileSticky((prev) => !prev)}
               />
             </section>
 
             {/* ── KATALOG PRODUK INTERAKTIF ── */}
-            <section className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-4 sm:p-5">
+            <section className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-3.5 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h2 className="text-base font-bold text-stone-900">
@@ -195,7 +220,7 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cari kode (ZP06, RFP21)..."
-                    className="w-full text-xs bg-stone-50 border border-stone-300 rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                    className="w-full min-h-[40px] text-xs bg-stone-50 border border-stone-300 rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-amber-500 focus:bg-white transition"
                   />
                   {searchQuery && (
                     <button
@@ -218,7 +243,7 @@ export default function App() {
                       key={cat}
                       type="button"
                       onClick={() => setActiveCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+                      className={`min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
                         active
                           ? 'bg-stone-900 text-amber-300 shadow-2xs'
                           : 'bg-stone-100 text-stone-600 hover:bg-stone-200/80'
@@ -236,7 +261,7 @@ export default function App() {
                   Tidak ada produk yang cocok dengan pencarian &ldquo;{searchQuery}&rdquo;.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
                   {filteredProducts.map((product) => {
                     const isOuterSelected = selectedProduct.kode === product.kode;
                     const isCenterSelected =
@@ -315,7 +340,7 @@ export default function App() {
             </section>
           </div>
 
-          {/* KOLOM KANAN: KALKULATOR, BUKAAN & AKSESORIS LIST (SCROLL INDEPENDEN DI DESKTOP) */}
+          {/* KOLOM KANAN: KALKULATOR, BUKAAN & AKSESORIS LIST */}
           <div className="lg:col-span-5 lg:h-full lg:overflow-y-auto lg:pr-1 pb-8">
             <Calculator
               activeProduct={selectedProduct}
