@@ -10,6 +10,9 @@ export default function Visualizer({
   centerProduct = null,
   centerWidth = 1.2,
   centerHeight = 2.0,
+  useListH = false,
+  listHColor = 'Gold',
+  useListLWpc = false,
 }) {
   const [showTvRoom, setShowTvRoom] = useState(true);
 
@@ -73,11 +76,48 @@ export default function Visualizer({
   const horizontalSeamPosBottom =
     isTinggiLebih && tinggiValid > 0 ? (tinggiPanelMeter / tinggiValid) * 100 : 100;
 
+  // ─── Styling Metalik / Matte Dinamis untuk List Transisi H ────────────────
+  const listHStyle = (() => {
+    if (!useListH) {
+      return {
+        barClass: 'bg-amber-400/70',
+        borderClass: 'border-amber-400/70',
+        ringClass: 'ring-amber-400/70',
+        dotClass: 'bg-amber-400',
+      };
+    }
+    if (listHColor === 'Rosegold') {
+      return {
+        barClass:
+          'bg-gradient-to-r from-rose-300 via-amber-200 to-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.75)]',
+        borderClass: 'border-rose-300 shadow-[0_0_12px_rgba(251,113,133,0.45)]',
+        ringClass: 'ring-rose-300 shadow-[0_0_14px_rgba(251,113,133,0.45)]',
+        dotClass: 'bg-rose-300',
+      };
+    }
+    if (listHColor === 'Hitam') {
+      return {
+        barClass: 'bg-stone-950 shadow-[0_1px_3px_rgba(0,0,0,0.85)]',
+        borderClass: 'border-stone-950',
+        ringClass: 'ring-stone-950',
+        dotClass: 'bg-stone-950',
+      };
+    }
+    // Default: Gold Metalik
+    return {
+      barClass:
+        'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 shadow-[0_0_8px_rgba(251,191,36,0.85)]',
+      borderClass: 'border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]',
+      ringClass: 'ring-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.5)]',
+      dotClass: 'bg-amber-400',
+    };
+  })();
+
   return (
     <div className="w-full flex flex-col items-center justify-center select-none py-1">
-      {/* ── Bar Kontrol Atas (Ikon SVG + Warna Kontras) ── */}
-      <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-3 mb-4 px-1">
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
+      {/* ── Bar Kontrol Atas (Info Produk + Badge List Aktif + Toggle TV) ── */}
+      <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-2.5 mb-4 px-1">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
           <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs shrink-0" />
           {activeMix ? (
             <span className="text-stone-700 font-medium">
@@ -94,6 +134,21 @@ export default function Visualizer({
               </span>
             </span>
           )}
+
+          {/* Badge Indikator Animasi jika List H Aktif */}
+          {useListH && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-stone-900 text-amber-200 border border-amber-400/40 transition-all duration-300">
+              <span className={`w-2 h-2 rounded-full ${listHStyle.dotClass}`} />
+              <span>List H {listHColor}</span>
+            </span>
+          )}
+
+          {/* Badge Indikator Animasi jika List L WPC Aktif */}
+          {useListLWpc && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-950 border border-amber-300 transition-all duration-300">
+              <span>+ List L WPC</span>
+            </span>
+          )}
         </div>
 
         <button
@@ -105,7 +160,6 @@ export default function Visualizer({
               : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
           }`}
         >
-          {/* Ikon SVG Layar TV */}
           <svg
             className="w-4 h-4 shrink-0"
             viewBox="0 0 24 24"
@@ -193,11 +247,12 @@ export default function Visualizer({
                     backgroundPosition: 'left bottom',
                   }}
                 >
+                  {/* Panel Fokus Tengah dengan Animasi Garis List Transisi H */}
                   <div
-                    className={`relative transition-all duration-300 shadow-[0_10px_28px_rgba(0,0,0,0.55)] ${
+                    className={`relative transition-all duration-500 shadow-[0_10px_28px_rgba(0,0,0,0.55)] ${
                       isFrameMode
-                        ? 'ring-2 ring-amber-400/80'
-                        : 'border-x-2 border-amber-400/80'
+                        ? `${useListH ? 'ring-[4px]' : 'ring-2'} ${listHStyle.ringClass}`
+                        : `${useListH ? 'border-x-[4px]' : 'border-x-2'} ${listHStyle.borderClass}`
                     }`}
                     style={{
                       width: `${centerWidthPct}%`,
@@ -239,15 +294,35 @@ export default function Visualizer({
                 </div>
               ) : null}
 
-              {/* Sambungan Horizontal (> 2.9m) */}
+              {/* ─── ANIMASI PEMASANGAN LIST L / SIKU WPC DI TEPI DINDING ─── */}
+              <div
+                className={`absolute inset-y-0 left-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-r from-amber-900/90 via-amber-700/80 to-transparent ${
+                  useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
+                }`}
+              />
+              <div
+                className={`absolute inset-y-0 right-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-l from-amber-900/90 via-amber-700/80 to-transparent ${
+                  useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
+                }`}
+              />
+
+              {/* ─── GARIS SAMBUNGAN HORIZONTAL (> 2.9m) DENGAN ANIMASI LIST H ─── */}
               {isTinggiLebih && (
                 <div
-                  className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
+                  className="absolute left-0 right-0 pointer-events-none z-15 flex items-center"
                   style={{ bottom: `${horizontalSeamPosBottom}%` }}
                 >
-                  <div className="w-full border-b border-dashed border-amber-400/90 shadow-xs" />
-                  <span className="ml-2 -mt-4 bg-stone-900/80 text-amber-300 text-[9px] px-1.5 py-0.5 rounded backdrop-blur-xs">
-                    List H ({tinggiPanelMeter}m)
+                  <div
+                    className={`transition-all duration-500 ${
+                      useListH
+                        ? `w-full h-[4px] ${listHStyle.barClass}`
+                        : 'w-full border-b border-dashed border-amber-400/90'
+                    }`}
+                  />
+                  <span className="ml-2 -mt-5 bg-stone-900/90 text-amber-300 text-[9px] font-semibold px-2 py-0.5 rounded backdrop-blur-xs shadow-xs whitespace-nowrap">
+                    {useListH
+                      ? `List H ${listHColor} (${tinggiPanelMeter}m)`
+                      : `Sambungan (${tinggiPanelMeter}m)`}
                   </span>
                 </div>
               )}

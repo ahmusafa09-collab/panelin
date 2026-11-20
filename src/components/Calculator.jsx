@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 export default function Calculator({
   activeProduct,
   lebar,
@@ -20,14 +22,25 @@ export default function Calculator({
   onCenterWidthChange,
   centerHeight,
   onCenterHeightChange,
+  useListH,
+  onToggleListH,
+  listHColor,
+  onListHColorChange,
+  listHQty,
+  onListHQtyChange,
+  useListLWpc,
+  onToggleListLWpc,
+  listLWpcQty,
+  onListLWpcQtyChange,
 }) {
   if (!activeProduct) return null;
+
+  const [includeInstall, setIncludeInstall] = useState(false);
 
   const lebarValid = Number(lebar) > 0 ? Number(lebar) : 0;
   const tinggiValid = Number(tinggi) > 0 ? Number(tinggi) : 0;
   const luasKotor = lebarValid * tinggiValid;
 
-  // Hitung total luas bukaan (pintu / jendela)
   const luasBukaan = openings.reduce((acc, item) => {
     const w = Math.max(Number(item.lebar) || 0, 0);
     const h = Math.max(Number(item.tinggi) || 0, 0);
@@ -43,10 +56,16 @@ export default function Calculator({
       maximumFractionDigits: 0,
     }).format(angka);
 
-  // ─── Fungsi Hitung Kebutuhan per Satu Jenis Produk ─────────────────────────
+  const getTarifPasang = (tipe) => {
+    if (tipe === 'WPC') return 25000;
+    if (tipe === 'Wallboard' || tipe === 'RFP') return 30000;
+    if (tipe === 'UVMarble' || tipe === 'UVMarbleGold') return 125000;
+    return 0;
+  };
+
   const hitungKebutuhan = (produk, targetLebarM, targetTinggiM, areaPengurangM2 = 0) => {
     if (!produk || targetLebarM <= 0 || targetTinggiM <= 0) {
-      return { jumlah: 0, totalHarga: 0, penguranganUnit: 0 };
+      return { jumlah: 0, totalHarga: 0, totalPasang: 0 };
     }
     const lebarPanelM = produk.dimensi.lebar_cm / 100;
     const tinggiPanelM = produk.dimensi.tinggi_cm / 100;
@@ -63,11 +82,11 @@ export default function Calculator({
 
     const jumlah = Math.max(jumlahKotor - penguranganUnit, 0);
     const totalHarga = jumlah * produk.harga;
+    const totalPasang = jumlah * getTarifPasang(produk.tipe);
 
-    return { jumlah, totalHarga, penguranganUnit };
+    return { jumlah, totalHarga, totalPasang };
   };
 
-  // ─── Kalkulasi Mode Tunggal vs Mode Mix ───────────────────────────────────
   const activeMix = isMixMode && centerProduct && lebarValid > 0 && tinggiValid > 0;
   const isFrameMode = activeMix && mixPattern === 'frame';
 
@@ -87,10 +106,10 @@ export default function Calculator({
 
   const hasilCenter = activeMix
     ? hitungKebutuhan(centerProduct, effectiveCenterW, effectiveCenterH, 0)
-    : { jumlah: 0, totalHarga: 0 };
+    : { jumlah: 0, totalHarga: 0, totalPasang: 0 };
 
   const hasilOuter = (() => {
-    if (!activeMix) return { jumlah: 0, totalHarga: 0 };
+    if (!activeMix) return { jumlah: 0, totalHarga: 0, totalPasang: 0 };
     if (!isFrameMode) {
       const kiri = hitungKebutuhan(activeProduct, sideWidth, tinggiValid, 0);
       const kanan = hitungKebutuhan(activeProduct, sideWidth, tinggiValid, 0);
@@ -103,6 +122,7 @@ export default function Calculator({
       return {
         jumlah,
         totalHarga: jumlah * activeProduct.harga,
+        totalPasang: jumlah * getTarifPasang(activeProduct.tipe),
       };
     } else {
       const kiri = hitungKebutuhan(activeProduct, sideWidth, tinggiValid, 0);
@@ -118,15 +138,72 @@ export default function Calculator({
       return {
         jumlah,
         totalHarga: jumlah * activeProduct.harga,
+        totalPasang: jumlah * getTarifPasang(activeProduct.tipe),
       };
     }
   })();
 
-  const grandTotal = activeMix
+  const hasWpc =
+    activeProduct.tipe === 'WPC' || (activeMix && centerProduct?.tipe === 'WPC');
+  const hasNonWpc =
+    activeProduct.tipe !== 'WPC' || (activeMix && centerProduct?.tipe !== 'WPC');
+
+  const totalLembarUvMarble = (() => {
+    let total = 0;
+    const isUv = (p) => p?.tipe === 'UVMarble' || p?.tipe === 'UVMarbleGold';
+    if (!activeMix) {
+      if (isUv(activeProduct)) total += hasilTunggal.jumlah;
+    } else {
+      if (isUv(activeProduct)) total += hasilOuter.jumlah;
+      if (isUv(centerProduct)) total += hasilCenter.jumlah;
+    }
+    return total;
+  })();
+
+  const butuhSambunganAtas = tinggiValid > 2.901;
+  const saranQtyListH = (() => {
+    let panjangMeter = 0;
+    if (butuhSambunganAtas) panjangMeter += lebarValid;
+    if (activeMix) {
+      panjangMeter += isFrameMode
+        ? 2 * (effectiveCenterW + effectiveCenterH)
+        : 2 * tinggiValid;
+    }
+    if (panjangMeter === 0) panjangMeter = tinggiValid;
+    return Math.max(Math.ceil(panjangMeter / 2.9), 1);
+  })();
+
+  const saranQtyListLWpc = Math.max(Math.ceil((tinggiValid * 2) / 2.9), 1);
+
+  useEffect(() => {
+    onListHQtyChange(saranQtyListH);
+  }, [saranQtyListH]);
+
+  useEffect(() => {
+    onListLWpcQtyChange(saranQtyListLWpc);
+  }, [saranQtyListLWpc]);
+
+  useEffect(() => {
+    if (!hasWpc) onToggleListLWpc(false);
+    if (!hasNonWpc) onToggleListH(false);
+  }, [hasWpc, hasNonWpc]);
+
+  const totalBahanPanel = activeMix
     ? hasilOuter.totalHarga + hasilCenter.totalHarga
     : hasilTunggal.totalHarga;
 
-  // ─── Buat Pesan Ringkasan WhatsApp ─────────────────────────────────────────
+  const totalListH = hasNonWpc && useListH ? listHQty * 50000 : 0;
+  const totalListLWpc = hasWpc && useListLWpc ? listLWpcQty * 40000 : 0;
+  const totalAksesoris = totalListH + totalListLWpc;
+
+  const totalJasaPasang = includeInstall
+    ? activeMix
+      ? hasilOuter.totalPasang + hasilCenter.totalPasang
+      : hasilTunggal.totalPasang
+    : 0;
+
+  const grandTotal = totalBahanPanel + totalAksesoris + totalJasaPasang;
+
   const handleShareWhatsApp = () => {
     const infoBukaan =
       openings.length > 0
@@ -153,7 +230,42 @@ export default function Calculator({
     } else {
       detailMaterial =
         `• Material: ${activeProduct.nama} (${activeProduct.dimensi.lebar_cm}×${activeProduct.dimensi.tinggi_cm} cm)\n` +
-        `• Kebutuhan: ${hasilTunggal.jumlah} ${activeProduct.satuan}\n`;
+        `• Kebutuhan: ${hasilTunggal.jumlah} ${activeProduct.satuan} (${formatRupiah(
+          hasilTunggal.totalHarga
+        )})\n`;
+    }
+
+    let detailAksesoris = '';
+    if (totalListH > 0 || totalListLWpc > 0) {
+      detailAksesoris += `\n*Aksesoris List (Panjang 290 cm):*\n`;
+      if (totalListH > 0) {
+        detailAksesoris += `• List Transisi / H (${listHColor}): ${listHQty} batang (${formatRupiah(
+          totalListH
+        )})\n`;
+      }
+      if (totalListLWpc > 0) {
+        detailAksesoris += `• List L / Siku WPC (Senada): ${listLWpcQty} batang (${formatRupiah(
+          totalListLWpc
+        )})\n`;
+      }
+    }
+
+    let detailLayanan = '';
+    if (includeInstall) {
+      detailLayanan =
+        `\n*Layanan Pemasangan Toko:*\n` +
+        `• Ongkos Pasang: ${formatRupiah(totalJasaPasang)}\n` +
+        `• Lem Kuning & Sealant: *GRATIS (Fasilitas Jasa Pasang Toko)*\n`;
+    } else if (totalLembarUvMarble > 0) {
+      const estimasiLem = totalLembarUvMarble * 90000;
+      detailLayanan =
+        `\n*Catatan Rekomendasi Perekat (Beli Bahan Saja):*\n` +
+        `• Pemasangan UV Marble membutuhkan *Lem Kuning* (estimasi ${totalLembarUvMarble} botol @ Rp 90.000 = ${formatRupiah(
+          estimasiLem
+        )}).\n` +
+        `• _Tips: Lem Kuning & Sealant GRATIS jika menggunakan jasa pasang toko._\n`;
+    } else {
+      detailLayanan = `\n_(Pembelian bahan saja — belum termasuk ongkos pasang)_\n`;
     }
 
     const pesan =
@@ -162,26 +274,25 @@ export default function Calculator({
         2
       )} m²]\n` +
       infoBukaan +
-      `\n*Rincian Material:*\n` +
+      `\n*Rincian Material Utama:*\n` +
       detailMaterial +
-      `\n*Estimasi Total Bahan: ${formatRupiah(grandTotal)}*\n` +
-      `_(Belum termasuk jasa pasang & aksesoris list/sealant)_`;
+      detailAksesoris +
+      detailLayanan +
+      `\n*ESTIMASI TOTAL: ${formatRupiah(grandTotal)}*`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(pesan)}`, '_blank');
   };
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
-      {/* ── Header Kalkulator & Switch Mode (Ikon SVG + Warna Kontras) ── */}
       <div className="p-4 sm:p-5 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-50/70">
         <div>
           <h2 className="text-base font-bold text-stone-900">Estimasi & RAB</h2>
           <p className="text-xs text-stone-500">
-            Pilih mode desain, ukuran dinding, & bukaan
+            Atur desain, ukuran dinding, list, & opsi pasang
           </p>
         </div>
 
-        {/* Segmented Control dengan Ikon Panel Tunggal vs Mix 2 Panel */}
         <div className="grid grid-cols-2 rounded-xl bg-stone-200/90 p-1 w-full sm:w-auto gap-1">
           <button
             type="button"
@@ -192,7 +303,6 @@ export default function Calculator({
                 : 'text-stone-600 hover:text-stone-900'
             }`}
           >
-            {/* Ikon 1 Panel */}
             <svg
               className="w-4 h-4 shrink-0"
               viewBox="0 0 24 24"
@@ -214,7 +324,6 @@ export default function Calculator({
                 : 'text-stone-700 hover:text-stone-950'
             }`}
           >
-            {/* Ikon Mix 2 Panel */}
             <svg
               className="w-4 h-4 shrink-0"
               viewBox="0 0 24 24"
@@ -265,7 +374,6 @@ export default function Calculator({
                 title="Tukar Posisi Bingkai & Tengah"
                 className="min-h-[40px] px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-xl transition cursor-pointer shrink-0 flex items-center gap-1.5"
               >
-                {/* Ikon Tukar Posisi */}
                 <svg
                   className="w-3.5 h-3.5 shrink-0"
                   viewBox="0 0 24 24"
@@ -283,7 +391,6 @@ export default function Calculator({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {/* SLOT 1: BINGKAI LUAR */}
               <button
                 type="button"
                 onClick={() => onActiveMixSlotChange('outer')}
@@ -320,7 +427,6 @@ export default function Calculator({
                 </div>
               </button>
 
-              {/* SLOT 2: FOKUS TENGAH */}
               <button
                 type="button"
                 onClick={() => onActiveMixSlotChange('center')}
@@ -358,7 +464,6 @@ export default function Calculator({
               </button>
             </div>
 
-            {/* Pilih Pola Visual Mix */}
             <div className="pt-1">
               <span className="text-xs font-bold text-stone-800 block mb-2">
                 2. Pilih Bentuk Pola Kombinasi:
@@ -404,7 +509,6 @@ export default function Calculator({
               </div>
             </div>
 
-            {/* Ukuran Panel Fokus Tengah */}
             <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/90 flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
                 <label className="text-xs font-bold text-stone-800">
@@ -498,7 +602,7 @@ export default function Calculator({
           </div>
         </div>
 
-        {/* ── BAGIAN 3: BUKAAN DINDING (IKON ARSITEKTUR + WARNA SEMANTIK) ── */}
+        {/* ── BAGIAN 3: BUKAAN DINDING (PINTU / JENDELA) ── */}
         <div className="border-t border-stone-200 pt-5">
           <div className="flex flex-col gap-2.5 mb-3">
             <div>
@@ -511,7 +615,6 @@ export default function Calculator({
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              {/* Tombol Tambah Pintu (Aksen Warm Amber + Ikon Pintu) */}
               <button
                 type="button"
                 onClick={() => onAddOpening('Pintu')}
@@ -533,7 +636,6 @@ export default function Calculator({
                 <span>+ Tambah Pintu</span>
               </button>
 
-              {/* Tombol Tambah Jendela (Aksen Sky Blue + Ikon Jendela) */}
               <button
                 type="button"
                 onClick={() => onAddOpening('Jendela')}
@@ -672,80 +774,316 @@ export default function Calculator({
           )}
         </div>
 
-        {/* ── BAGIAN 4: KARTU RINGKASAN RAB ── */}
-        <div className="rounded-2xl bg-stone-950 text-stone-100 p-4 sm:p-5 flex flex-col gap-3 shadow-inner">
-          <div className="flex items-center justify-between text-xs text-stone-400">
-            <span>Luas Dinding Kotor</span>
-            <span className="font-mono text-stone-300">{luasKotor.toFixed(2)} m²</span>
+        {/* ── BAGIAN 4: AKSESORIS LIST PENUTUP SAMBUNGAN / SUDUT ── */}
+        <div className="border-t border-stone-200 pt-5 flex flex-col gap-3">
+          <div>
+            <span className="text-xs font-bold text-stone-800 block">
+              Aksesoris List — Penutup Sambungan / Siku (Opsional)
+            </span>
+            <span className="text-xs text-stone-500">
+              {butuhSambunganAtas
+                ? 'Disarankan: Tinggi dinding > 2,9m membutuhkan list sambungan'
+                : 'Aktifkan untuk melihat simulasi garis list langsung pada dinding'}
+            </span>
           </div>
 
-          {openings.length > 0 && (
-            <>
-              <div className="flex items-center justify-between text-xs text-amber-300/90">
-                <span>Potongan Bukaan ({openings.length})</span>
-                <span className="font-mono">- {luasBukaan.toFixed(2)} m²</span>
+          {/* KARTU LIST TRANSISI / LIST H */}
+          {hasNonWpc && (
+            <div
+              className={`p-3.5 rounded-xl border transition-all duration-300 ${
+                useListH
+                  ? 'border-amber-400 bg-amber-50/40 shadow-2xs'
+                  : 'border-stone-200 bg-stone-50/70'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">
+                    List Transisi / List H (290 cm)
+                  </p>
+                  <p className="text-[11px] text-stone-500">
+                    Untuk Wallboard & RFP · Rp 50.000 / batang
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleListH((prev) => !prev)}
+                  className={`min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    useListH
+                      ? 'bg-stone-900 text-amber-300 border-stone-900'
+                      : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
+                  }`}
+                >
+                  {useListH ? '✓ Dipakai' : '+ Tambahkan'}
+                </button>
               </div>
-              <div className="flex items-center justify-between text-xs font-semibold text-white border-b border-stone-800 pb-2.5">
-                <span>Luas Bidang Bersih</span>
-                <span className="font-mono text-amber-300">
-                  {luasBersih.toFixed(2)} m²
-                </span>
-              </div>
-            </>
+
+              {useListH && (
+                <div className="mt-3 pt-3 border-t border-amber-200/70 flex flex-col gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold text-stone-700 block mb-1.5">
+                      Pilih Warna List (Langsung Tampil di Preview):
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { nama: 'Gold', dot: 'bg-amber-400 border-amber-600' },
+                        { nama: 'Rosegold', dot: 'bg-rose-300 border-rose-500' },
+                        { nama: 'Hitam', dot: 'bg-stone-900 border-stone-950' },
+                      ].map((warna) => (
+                        <button
+                          key={warna.nama}
+                          type="button"
+                          onClick={() => onListHColorChange(warna.nama)}
+                          className={`min-h-[40px] px-2.5 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                            listHColor === warna.nama
+                              ? 'bg-stone-900 text-white border-stone-900 shadow-2xs'
+                              : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
+                          }`}
+                        >
+                          <span
+                            className={`w-3 h-3 rounded-full border ${warna.dot}`}
+                          />
+                          <span>{warna.nama}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-stone-700">
+                      Jumlah (Saran: {saranQtyListH} btg)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onListHQtyChange((q) => Math.max(q - 1, 1))}
+                        className="w-10 h-10 rounded-lg bg-white border border-stone-300 font-bold text-stone-800 hover:bg-stone-100 cursor-pointer"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center text-sm font-bold text-stone-900">
+                        {listHQty}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onListHQtyChange((q) => q + 1)}
+                        className="w-10 h-10 rounded-lg bg-white border border-stone-300 font-bold text-stone-800 hover:bg-stone-100 cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+
+          {/* KARTU LIST L / SIKU WPC */}
+          {hasWpc && (
+            <div
+              className={`p-3.5 rounded-xl border transition-all duration-300 ${
+                useListLWpc
+                  ? 'border-amber-400 bg-amber-50/40 shadow-2xs'
+                  : 'border-stone-200 bg-stone-50/70'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">
+                    List L / Siku WPC (290 cm)
+                  </p>
+                  <p className="text-[11px] text-stone-500">
+                    Warna senada motif WPC · Rp 40.000 / batang
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleListLWpc((prev) => !prev)}
+                  className={`min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    useListLWpc
+                      ? 'bg-stone-900 text-amber-300 border-stone-900'
+                      : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
+                  }`}
+                >
+                  {useListLWpc ? '✓ Dipakai' : '+ Tambahkan'}
+                </button>
+              </div>
+
+              {useListLWpc && (
+                <div className="mt-3 pt-3 border-t border-amber-200/70 flex items-center justify-between">
+                  <span className="text-xs font-medium text-stone-700">
+                    Jumlah (Saran tepi: {saranQtyListLWpc} btg)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onListLWpcQtyChange((q) => Math.max(q - 1, 1))}
+                      className="w-10 h-10 rounded-lg bg-white border border-stone-300 font-bold text-stone-800 hover:bg-stone-100 cursor-pointer"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-bold text-stone-900">
+                      {listLWpcQty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onListLWpcQtyChange((q) => q + 1)}
+                      className="w-10 h-10 rounded-lg bg-white border border-stone-300 font-bold text-stone-800 hover:bg-stone-100 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── BAGIAN 5: OPSI PEMBELIAN ── */}
+        <div className="border-t border-stone-200 pt-5">
+          <span className="text-xs font-bold text-stone-800 block mb-2.5">
+            Opsi Layanan Pemasangan
+          </span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIncludeInstall(false)}
+              className={`min-h-[54px] p-3 rounded-xl border text-left transition cursor-pointer ${
+                !includeInstall
+                  ? 'border-stone-900 bg-stone-900 text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <p className="text-xs font-bold">Beli Bahan Saja</p>
+              <p className="text-[10px] opacity-75 mt-0.5">Tanpa ongkos tukang</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIncludeInstall(true)}
+              className={`min-h-[54px] p-3 rounded-xl border text-left transition cursor-pointer ${
+                includeInstall
+                  ? 'border-amber-500 bg-amber-500 text-stone-950 shadow-xs'
+                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <p className="text-xs font-bold">+ Jasa Pasang Toko</p>
+              <p className="text-[10px] opacity-85 mt-0.5">
+                Gratis lem kuning & sealant
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* ── BAGIAN 6: KARTU RINGKASAN RAB ── */}
+        <div className="rounded-2xl bg-stone-950 text-stone-100 p-4 sm:p-5 flex flex-col gap-3 shadow-inner">
+          <div className="flex items-center justify-between text-xs text-stone-400">
+            <span>Luas Dinding {openings.length > 0 ? 'Bersih' : 'Total'}</span>
+            <span className="font-mono text-stone-200">
+              {luasBersih.toFixed(2)} m²
+              {openings.length > 0 && (
+                <span className="text-stone-500"> (kotor {luasKotor.toFixed(2)} m²)</span>
+              )}
+            </span>
+          </div>
 
           {activeMix ? (
             <div className="flex flex-col gap-2 text-xs pt-1">
               <div className="flex items-center justify-between">
                 <span className="text-stone-300">
-                  Bingkai ({activeProduct.kode})
+                  Bingkai ({activeProduct.kode}) · {hasilOuter.jumlah}{' '}
+                  {activeProduct.satuan}
                 </span>
-                <span className="font-semibold text-white">
-                  {hasilOuter.jumlah} {activeProduct.satuan} ·{' '}
-                  <span className="text-amber-300">
-                    {formatRupiah(hasilOuter.totalHarga)}
-                  </span>
+                <span className="font-semibold text-amber-300">
+                  {formatRupiah(hasilOuter.totalHarga)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-stone-300">
-                  Tengah ({centerProduct.kode})
+                  Tengah ({centerProduct.kode}) · {hasilCenter.jumlah}{' '}
+                  {centerProduct.satuan}
                 </span>
-                <span className="font-semibold text-white">
-                  {hasilCenter.jumlah} {centerProduct.satuan} ·{' '}
-                  <span className="text-amber-300">
-                    {formatRupiah(hasilCenter.totalHarga)}
-                  </span>
+                <span className="font-semibold text-amber-300">
+                  {formatRupiah(hasilCenter.totalHarga)}
                 </span>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-stone-300">Kebutuhan Material</span>
-              <span className="text-sm font-bold text-white">
-                {hasilTunggal.jumlah} {activeProduct.satuan}
+              <span className="text-stone-300">
+                Bahan ({hasilTunggal.jumlah} {activeProduct.satuan})
+              </span>
+              <span className="font-semibold text-white">
+                {formatRupiah(hasilTunggal.totalHarga)}
               </span>
             </div>
           )}
 
+          {totalListH > 0 && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-300">
+                List H {listHColor} ({listHQty} btg)
+              </span>
+              <span className="font-semibold text-amber-300">
+                {formatRupiah(totalListH)}
+              </span>
+            </div>
+          )}
+          {totalListLWpc > 0 && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-stone-300">
+                List L WPC Senada ({listLWpcQty} btg)
+              </span>
+              <span className="font-semibold text-amber-300">
+                {formatRupiah(totalListLWpc)}
+              </span>
+            </div>
+          )}
+
+          {includeInstall ? (
+            <div className="pt-2 border-t border-stone-800 flex flex-col gap-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-stone-300">Jasa Pemasangan Toko</span>
+                <span className="font-semibold text-amber-300">
+                  {formatRupiah(totalJasaPasang)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-emerald-400">
+                <span>Lem Kuning & Sealant</span>
+                <span className="font-bold">GRATIS (Fasilitas Pasang)</span>
+              </div>
+            </div>
+          ) : (
+            totalLembarUvMarble > 0 && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-[11px] text-amber-200 leading-relaxed">
+                <strong className="text-amber-300 block mb-0.5">
+                  Rekomendasi Perekat UV Marble:
+                </strong>
+                Untuk pemasangan mandiri tanpa jasa tukang toko, disarankan memakai{' '}
+                <strong>Lem Kuning</strong> (±{totalLembarUvMarble} botol @ Rp 90.000 ={' '}
+                <strong>{formatRupiah(totalLembarUvMarble * 90000)}</strong>).{' '}
+                <span className="text-emerald-300">
+                  Gratis jika menggunakan jasa pasang toko.
+                </span>
+              </div>
+            )
+          )}
+
           <div className="pt-2.5 border-t border-stone-800 flex items-baseline justify-between">
-            <span className="text-xs text-stone-400">Estimasi Harga Bahan</span>
+            <span className="text-xs text-stone-400">
+              {includeInstall ? 'Total Terima Beres' : 'Estimasi Total Bahan'}
+            </span>
             <span className="text-lg sm:text-xl font-extrabold text-amber-400">
               {formatRupiah(grandTotal)}
             </span>
           </div>
 
-          {/* Tombol Utama Kirim WhatsApp (Hijau Emerald khas WA + Ikon WA) */}
           <button
             type="button"
             onClick={handleShareWhatsApp}
             className="mt-1 w-full min-h-[48px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer flex items-center justify-center gap-2.5 shadow-sm"
           >
-            <svg
-              className="w-5 h-5 shrink-0"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12.031 2c-5.516 0-9.969 4.453-9.969 9.969 0 1.758.458 3.475 1.328 4.988L2 22l5.188-1.359a9.927 9.927 0 0 0 4.843 1.258h.004c5.515 0 9.969-4.453 9.969-9.969A9.928 9.928 0 0 0 19.08 4.92 9.914 9.914 0 0 0 12.031 2zm5.814 14.253c-.246.693-1.434 1.324-1.992 1.406-.512.076-1.158.108-1.87-.118-.432-.137-.986-.32-1.696-.627-2.984-1.289-4.933-4.294-5.082-4.492-.149-.198-1.215-1.617-1.215-3.084 0-1.467.768-2.188 1.041-2.487.273-.299.596-.374.794-.374.199 0 .397.002.571.01.183.009.429-.07.671.512.248.596.844 2.062.918 2.212.075.149.124.323.025.522-.099.199-.149.323-.298.497-.149.174-.313.389-.447.522-.149.149-.304.31-.131.608.174.298.772 1.274 1.658 2.064 1.139 1.016 2.099 1.331 2.397 1.48.298.149.472.124.646-.075.174-.199.745-.869.944-1.167.199-.298.397-.249.671-.149.273.099 1.739.82 2.037.969.298.149.497.224.571.348.075.124.075.72-.171 1.413z" />
             </svg>
             <span>Bagikan Estimasi ke WhatsApp</span>

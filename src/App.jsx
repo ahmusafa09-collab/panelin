@@ -4,21 +4,15 @@ import Visualizer from './components/Visualizer';
 import Calculator from './components/Calculator';
 
 export default function App() {
-  // Produk utama (dipakai juga sebagai Panel Bingkai/Luar saat Mode Mix)
   const [selectedProduct, setSelectedProduct] = useState(catalogData[0]);
-
-  // Dimensi dinding (meter)
   const [lebar, setLebar] = useState(3);
   const [tinggi, setTinggi] = useState(3);
-
-  // State Daftar Bukaan Dinding (Pintu / Jendela)
-  // Format item: { id, nama, lebar, tinggi, jarakKiri, jarakBawah }
   const [openings, setOpenings] = useState([]);
 
   // State Mode Mix Produk
   const [isMixMode, setIsMixMode] = useState(false);
-  const [mixPattern, setMixPattern] = useState('wings'); // 'wings' | 'frame'
-  const [activeMixSlot, setActiveMixSlot] = useState('center'); // 'outer' | 'center'
+  const [mixPattern, setMixPattern] = useState('wings');
+  const [activeMixSlot, setActiveMixSlot] = useState('center');
 
   const defaultCenter = useMemo(
     () =>
@@ -30,6 +24,14 @@ export default function App() {
   const [centerProduct, setCenterProduct] = useState(defaultCenter);
   const [centerWidth, setCenterWidth] = useState(1.2);
   const [centerHeight, setCenterHeight] = useState(2.0);
+
+  // State Aksesoris List (Dishare antara Calculator & Visualizer)
+  const [useListH, setUseListH] = useState(false);
+  const [listHColor, setListHColor] = useState('Gold'); // 'Gold' | 'Rosegold' | 'Hitam'
+  const [listHQty, setListHQty] = useState(1);
+
+  const [useListLWpc, setUseListLWpc] = useState(false);
+  const [listLWpcQty, setListLWpcQty] = useState(2);
 
   // Filter & pencarian katalog
   const [activeCategory, setActiveCategory] = useState('Semua');
@@ -54,7 +56,6 @@ export default function App() {
     });
   }, [activeCategory, searchQuery]);
 
-  // Handler klik kartu katalog
   const handleSelectCatalogProduct = (product) => {
     if (!isMixMode) {
       setSelectedProduct(product);
@@ -72,14 +73,12 @@ export default function App() {
     }
   };
 
-  // Tukar posisi material Bingkai <-> Tengah
   const handleSwapMixProducts = () => {
     const temp = selectedProduct;
     setSelectedProduct(centerProduct);
     setCenterProduct(temp);
   };
 
-  // Handler Tambah / Ubah / Hapus Bukaan (Pintu / Jendela)
   const handleAddOpening = (jenis = 'Pintu') => {
     const isJendela = jenis === 'Jendela';
     const newOpening = {
@@ -88,7 +87,7 @@ export default function App() {
       lebar: isJendela ? 1.2 : 0.9,
       tinggi: isJendela ? 1.4 : 2.1,
       jarakKiri: 0.3,
-      jarakBawah: isJendela ? 0.9 : 0, // Pintu menempel lantai (0m), jendela menggantung
+      jarakBawah: isJendela ? 0.9 : 0,
     };
     setOpenings((prev) => [...prev, newOpening]);
   };
@@ -161,6 +160,9 @@ export default function App() {
                 centerProduct={centerProduct}
                 centerWidth={centerWidth}
                 centerHeight={centerHeight}
+                useListH={useListH}
+                listHColor={listHColor}
+                useListLWpc={useListLWpc}
               />
             </section>
 
@@ -313,7 +315,7 @@ export default function App() {
             </section>
           </div>
 
-          {/* KOLOM KANAN: KALKULATOR, BUKAAN & KONTROL MIX */}
+          {/* KOLOM KANAN: KALKULATOR, BUKAAN & AKSESORIS LIST */}
           <div className="lg:col-span-5 lg:sticky lg:top-20">
             <Calculator
               activeProduct={selectedProduct}
@@ -337,6 +339,16 @@ export default function App() {
               onCenterWidthChange={setCenterWidth}
               centerHeight={centerHeight}
               onCenterHeightChange={setCenterHeight}
+              useListH={useListH}
+              onToggleListH={setUseListH}
+              listHColor={listHColor}
+              onListHColorChange={setListHColor}
+              listHQty={listHQty}
+              onListHQtyChange={setListHQty}
+              useListLWpc={useListLWpc}
+              onToggleListLWpc={setUseListLWpc}
+              listLWpcQty={listLWpcQty}
+              onListLWpcQtyChange={setListLWpcQty}
             />
           </div>
         </div>
