@@ -110,9 +110,9 @@ export default function App() {
     }).format(angka);
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-800 flex flex-col font-sans">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-stone-100 text-stone-800 flex flex-col font-sans">
       {/* ── HEADER SHOWROOM CHARCOAL & GOLD ── */}
-      <header className="bg-stone-950 text-stone-100 border-b border-amber-500/20 sticky top-0 z-30 shadow-md">
+      <header className="bg-stone-950 text-stone-100 border-b border-amber-500/20 sticky top-0 z-30 shrink-0 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img
@@ -144,12 +144,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── KONTEN UTAMA ── */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 flex-1">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            <section className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-3 sm:p-5">
+      {/* ── KONTEN UTAMA (SPLIT SCROLL DI DESKTOP, STICKY PREVIEW DI HP) ── */}
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-5 flex-1 lg:overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
+          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK (SCROLL INDEPENDEN DI DESKTOP) */}
+          <div className="lg:col-span-7 flex flex-col gap-5 lg:h-full lg:overflow-y-auto lg:pr-2 pb-4">
+            <section className="sticky top-[57px] lg:static z-20 bg-white rounded-2xl border border-stone-200/90 shadow-md lg:shadow-xs p-3 sm:p-5">
               <Visualizer
                 activeProduct={selectedProduct}
                 lebar={lebar}
@@ -315,8 +315,8 @@ export default function App() {
             </section>
           </div>
 
-          {/* KOLOM KANAN: KALKULATOR, BUKAAN & AKSESORIS LIST */}
-          <div className="lg:col-span-5 lg:sticky lg:top-20">
+          {/* KOLOM KANAN: KALKULATOR, BUKAAN & AKSESORIS LIST (SCROLL INDEPENDEN DI DESKTOP) */}
+          <div className="lg:col-span-5 lg:h-full lg:overflow-y-auto lg:pr-1 pb-8">
             <Calculator
               activeProduct={selectedProduct}
               lebar={lebar}
