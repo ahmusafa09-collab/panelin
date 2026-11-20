@@ -11,12 +11,15 @@ export default function App() {
   const [lebar, setLebar] = useState(3);
   const [tinggi, setTinggi] = useState(3);
 
+  // State Daftar Bukaan Dinding (Pintu / Jendela)
+  // Format item: { id, nama, lebar, tinggi, jarakKiri, jarakBawah }
+  const [openings, setOpenings] = useState([]);
+
   // State Mode Mix Produk
   const [isMixMode, setIsMixMode] = useState(false);
   const [mixPattern, setMixPattern] = useState('wings'); // 'wings' | 'frame'
   const [activeMixSlot, setActiveMixSlot] = useState('center'); // 'outer' | 'center'
 
-  // Default panel tengah saat Mix aktif (ambil UV Marble pertama jika ada)
   const defaultCenter = useMemo(
     () =>
       catalogData.find(
@@ -51,7 +54,7 @@ export default function App() {
     });
   }, [activeCategory, searchQuery]);
 
-  // Handler klik kartu katalog (otomatis mengisi slot yang aktif)
+  // Handler klik kartu katalog
   const handleSelectCatalogProduct = (product) => {
     if (!isMixMode) {
       setSelectedProduct(product);
@@ -62,7 +65,6 @@ export default function App() {
       setSelectedProduct(product);
     } else {
       setCenterProduct(product);
-      // Sesuaikan lebar default panel tengah mengikuti lebar lembar produk yang dipilih
       const lebarLembarMeter = product.dimensi.lebar_cm / 100;
       if (lebarLembarMeter <= Number(lebar)) {
         setCenterWidth(lebarLembarMeter);
@@ -75,6 +77,30 @@ export default function App() {
     const temp = selectedProduct;
     setSelectedProduct(centerProduct);
     setCenterProduct(temp);
+  };
+
+  // Handler Tambah / Ubah / Hapus Bukaan (Pintu / Jendela)
+  const handleAddOpening = (jenis = 'Pintu') => {
+    const isJendela = jenis === 'Jendela';
+    const newOpening = {
+      id: Date.now(),
+      nama: isJendela ? 'Jendela' : 'Pintu',
+      lebar: isJendela ? 1.2 : 0.9,
+      tinggi: isJendela ? 1.4 : 2.1,
+      jarakKiri: 0.3,
+      jarakBawah: isJendela ? 0.9 : 0, // Pintu menempel lantai (0m), jendela menggantung
+    };
+    setOpenings((prev) => [...prev, newOpening]);
+  };
+
+  const handleUpdateOpening = (id, field, value) => {
+    setOpenings((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const handleRemoveOpening = (id) => {
+    setOpenings((prev) => prev.filter((item) => item.id !== id));
   };
 
   const formatRupiah = (angka) =>
@@ -110,7 +136,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Info Ringkas Ukuran Dinding Aktif */}
           <div className="flex items-center gap-2 bg-stone-900/90 border border-stone-800 px-3 py-1.5 rounded-full text-xs">
             <span className="text-stone-400">Dinding:</span>
             <span className="font-semibold text-amber-300">
@@ -120,17 +145,17 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── KONTEN UTAMA (VISUALIZER KIRI + KALKULATOR KANAN) ── */}
+      {/* ── KONTEN UTAMA ── */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK (7 Kolom) */}
+          {/* KOLOM KIRI: SIMULASI RUANGAN & KATALOG PRODUK */}
           <div className="lg:col-span-7 flex flex-col gap-6">
-            {/* Kartu Preview Ruangan */}
             <section className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-3 sm:p-5">
               <Visualizer
                 activeProduct={selectedProduct}
                 lebar={lebar}
                 tinggi={tinggi}
+                openings={openings}
                 isMixMode={isMixMode}
                 mixPattern={mixPattern}
                 centerProduct={centerProduct}
@@ -162,7 +187,6 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Kolom Pencarian */}
                 <div className="relative w-full sm:w-56">
                   <input
                     type="text"
@@ -228,7 +252,6 @@ export default function App() {
                             : 'border-stone-200 hover:border-stone-400 hover:shadow-sm'
                         }`}
                       >
-                        {/* Thumbnail Tekstur */}
                         <div className="aspect-[4/3] w-full bg-stone-200 relative overflow-hidden">
                           <img
                             src={product.gambar2D}
@@ -237,7 +260,6 @@ export default function App() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
 
-                          {/* Badge Status Pilihan */}
                           <div className="absolute top-1.5 left-1.5 flex flex-wrap gap-1">
                             {!isMixMode && isOuterSelected && (
                               <span className="bg-stone-950/90 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
@@ -256,13 +278,11 @@ export default function App() {
                             )}
                           </div>
 
-                          {/* Badge Dimensi */}
                           <span className="absolute bottom-1.5 right-1.5 bg-black/65 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-2xs">
                             {product.dimensi.lebar_cm}×{product.dimensi.tinggi_cm}
                           </span>
                         </div>
 
-                        {/* Info Produk */}
                         <div className="p-2.5 flex-1 flex flex-col justify-between">
                           <div>
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
@@ -293,7 +313,7 @@ export default function App() {
             </section>
           </div>
 
-          {/* KOLOM KANAN: KALKULATOR & KONTROL MIX (5 Kolom) */}
+          {/* KOLOM KANAN: KALKULATOR, BUKAAN & KONTROL MIX */}
           <div className="lg:col-span-5 lg:sticky lg:top-20">
             <Calculator
               activeProduct={selectedProduct}
@@ -301,6 +321,10 @@ export default function App() {
               tinggi={tinggi}
               onLebarChange={setLebar}
               onTinggiChange={setTinggi}
+              openings={openings}
+              onAddOpening={handleAddOpening}
+              onUpdateOpening={handleUpdateOpening}
+              onRemoveOpening={handleRemoveOpening}
               isMixMode={isMixMode}
               onToggleMixMode={setIsMixMode}
               mixPattern={mixPattern}

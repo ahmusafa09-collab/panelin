@@ -4,20 +4,18 @@ export default function Visualizer({
   activeProduct,
   lebar,
   tinggi,
+  openings = [],
   isMixMode = false,
   mixPattern = 'wings',
   centerProduct = null,
   centerWidth = 1.2,
   centerHeight = 2.0,
 }) {
-  // Toggle internal untuk menampilkan/menyembunyikan furnitur Ruang TV
   const [showTvRoom, setShowTvRoom] = useState(true);
 
   if (!activeProduct) return null;
 
   const {
-    kategori,
-    satuan,
     gambar2D: gambarPanel,
     dimensi: { lebar_cm: lebarPanelCm, tinggi_cm: tinggiPanelCm },
   } = activeProduct;
@@ -29,7 +27,6 @@ export default function Visualizer({
   const lebarPanelMeter = lebarPanelCm / 100;
   const tinggiPanelMeter = tinggiPanelCm / 100;
 
-  // ─── Skala Panel Utama (Berdiri Vertikal) ──────────────────────────────────
   const lebarPanelPercent =
     lebarValid > 0 && lebarPanelMeter > 0 ? (lebarPanelMeter / lebarValid) * 100 : 0;
   const tinggiPanelPercent =
@@ -42,7 +39,7 @@ export default function Visualizer({
     if (pos < 100) verticalSeams.push({ pos, nomor: i });
   }
 
-  // ─── Perhitungan Mode Mix (Sayap Kiri-Kanan vs Bingkai 4 Sisi) ─────────────
+  // Perhitungan Mode Mix
   const activeMix = isMixMode && centerProduct && lebarValid > 0 && tinggiValid > 0;
   const isFrameMode = activeMix && mixPattern === 'frame';
 
@@ -69,7 +66,7 @@ export default function Visualizer({
   const centerTileHeightPct =
     effectiveCenterHeight > 0 ? (centerPanelHeightMeter / effectiveCenterHeight) * 100 : 0;
 
-  // ─── Sambungan Horizontal (> 2.9m) ─────────────────────────────────────────
+  // Sambungan Horizontal (> 2.9m)
   const TOLERANSI_FP = 0.001;
   const isTinggiLebih =
     tinggiPanelMeter > 0 && tinggiValid > tinggiPanelMeter + TOLERANSI_FP;
@@ -77,11 +74,11 @@ export default function Visualizer({
     isTinggiLebih && tinggiValid > 0 ? (tinggiPanelMeter / tinggiValid) * 100 : 100;
 
   return (
-    <div className="w-full flex flex-col items-center justify-center select-none py-2">
-      {/* ── Bar Kontrol Atas (Info Material & Toggle Simulasi Ruang TV) ── */}
-      <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-2 mb-4 px-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs" />
+    <div className="w-full flex flex-col items-center justify-center select-none py-1">
+      {/* ── Bar Kontrol Atas (Ikon SVG + Warna Kontras) ── */}
+      <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-3 mb-4 px-1">
+        <div className="flex items-center gap-2 text-xs sm:text-sm">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs shrink-0" />
           {activeMix ? (
             <span className="text-stone-700 font-medium">
               Kombinasi{' '}
@@ -92,33 +89,44 @@ export default function Visualizer({
           ) : (
             <span className="text-stone-700 font-medium">
               <strong className="text-stone-900">{activeProduct.nama}</strong>{' '}
-              <span className="text-stone-400">
-                ({lebarPanelCm}×{tinggiPanelCm} cm · {totalLajur} {satuan})
+              <span className="text-stone-400 text-xs">
+                ({lebarPanelCm}×{tinggiPanelCm} cm)
               </span>
             </span>
           )}
         </div>
 
-        {/* Tombol Toggle Simulasi Ruang TV */}
         <button
           type="button"
           onClick={() => setShowTvRoom((prev) => !prev)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer shadow-2xs ${
+          className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold border transition cursor-pointer shadow-2xs flex items-center gap-2 ${
             showTvRoom
               ? 'bg-stone-900 text-amber-300 border-stone-800 hover:bg-stone-800'
-              : 'bg-white text-stone-600 border-stone-300 hover:bg-stone-50'
+              : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
           }`}
         >
-          <span>{showTvRoom ? '📺' : '🖼️'}</span>
-          <span>{showTvRoom ? 'Ruang TV: Aktif' : 'Tampilkan Ruang TV'}</span>
+          {/* Ikon SVG Layar TV */}
+          <svg
+            className="w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="2" y="4" width="20" height="13" rx="2" />
+            <path d="M8 21h8" />
+            <path d="M12 17v4" />
+          </svg>
+          <span>{showTvRoom ? 'Furnitur TV: Aktif' : 'Tampilkan Furnitur TV'}</span>
         </button>
       </div>
 
       {/* ── Area Simulasi Ruangan + Garis Dimensi Arsitektur ── */}
-      <div className="w-full max-w-xl px-4 sm:px-8 flex flex-col items-center">
-        {/* Garis Dimensi Lebar Atas (Khusus Mode Mix: Kiri - Tengah - Kanan) */}
+      <div className="w-full max-w-xl px-3 sm:px-8 flex flex-col items-center">
         {activeMix ? (
-          <div className="w-full flex items-center text-[10px] font-mono text-stone-600 mb-1.5 px-0.5">
+          <div className="w-full flex items-center text-[11px] font-mono text-stone-600 mb-1.5 px-0.5">
             {sideWidthPct > 0 && (
               <div
                 style={{ width: `${sideWidthPct}%` }}
@@ -152,7 +160,6 @@ export default function Visualizer({
             )}
           </div>
         ) : (
-          /* Garis Dimensi Lebar Total Atas (Mode Tunggal) */
           <div className="w-full flex items-center justify-center border-x border-stone-400 text-[11px] font-mono text-stone-700 mb-1.5 relative">
             <div className="w-full border-b border-stone-400 absolute" />
             <span className="bg-stone-100 px-2 relative z-10 font-semibold">
@@ -161,13 +168,11 @@ export default function Visualizer({
           </div>
         )}
 
-        {/* Baris Tengah: Bingkai Ruangan + Garis Tinggi Kanan */}
         <div className="w-full flex items-stretch justify-center relative">
-          {/* ══════════ KOTAK SIMULASI RUANGAN REALISTIS ══════════ */}
+          {/* ══════════ KOTAK SIMULASI RUANGAN ══════════ */}
           <div className="w-full rounded-xl overflow-hidden shadow-[0_20px_45px_-12px_rgba(0,0,0,0.35)] border border-stone-300 bg-stone-900 flex flex-col">
-            {/* 1. Plafon & Lis Atas */}
+            {/* 1. Plafon & Lampu Downlight */}
             <div className="h-3.5 w-full bg-gradient-to-b from-stone-200 to-stone-300 border-b border-stone-400/60 relative flex items-center justify-around">
-              {/* Titik lampu downlight */}
               <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
               <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
               <span className="w-6 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
@@ -179,7 +184,6 @@ export default function Visualizer({
               style={{ aspectRatio: `${aspectRatio}` }}
             >
               {activeMix ? (
-                /* ─── RENDER MODE MIX (SAYAP / BINGKAI 4 SISI) ─── */
                 <div
                   className="w-full h-full relative flex items-center justify-center"
                   style={{
@@ -189,7 +193,6 @@ export default function Visualizer({
                     backgroundPosition: 'left bottom',
                   }}
                 >
-                  {/* Panel Fokus Tengah (UV Marble dengan efek timbul & trim halus) */}
                   <div
                     className={`relative transition-all duration-300 shadow-[0_10px_28px_rgba(0,0,0,0.55)] ${
                       isFrameMode
@@ -205,7 +208,6 @@ export default function Visualizer({
                       backgroundPosition: 'center bottom',
                     }}
                   >
-                    {/* Kilau halus pada permukaan UV Marble */}
                     <div
                       className="absolute inset-0 pointer-events-none"
                       style={{
@@ -216,7 +218,6 @@ export default function Visualizer({
                   </div>
                 </div>
               ) : gambarPanel ? (
-                /* ─── RENDER MODE TUNGGAL (1 PRODUK) ─── */
                 <div
                   className="w-full h-full relative"
                   style={{
@@ -226,7 +227,6 @@ export default function Visualizer({
                     backgroundPosition: 'left bottom',
                   }}
                 >
-                  {/* Garis Nat Vertikal Halus */}
                   {verticalSeams.map(({ pos, nomor }) => (
                     <div
                       key={nomor}
@@ -239,7 +239,7 @@ export default function Visualizer({
                 </div>
               ) : null}
 
-              {/* Sambungan Horizontal (> 2.9m) dengan garis tipis elegan */}
+              {/* Sambungan Horizontal (> 2.9m) */}
               {isTinggiLebih && (
                 <div
                   className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
@@ -252,7 +252,58 @@ export default function Visualizer({
                 </div>
               )}
 
-              {/* ─── LAYER PENCAHAYAAN RUANGAN (DOWNLIGHT & AMBIENT SHADOW) ─── */}
+              {/* ─── LAYER BUKAAN DINDING (PINTU / JENDELA) ─── */}
+              {lebarValid > 0 &&
+                tinggiValid > 0 &&
+                openings.map((item) => {
+                  const opW = Math.max(Number(item.lebar) || 0, 0);
+                  const opH = Math.max(Number(item.tinggi) || 0, 0);
+                  const opLeft = Math.max(Number(item.jarakKiri) || 0, 0);
+                  const opBottom = Math.max(Number(item.jarakBawah) || 0, 0);
+
+                  if (opW <= 0 || opH <= 0) return null;
+
+                  const widthPct = Math.min((opW / lebarValid) * 100, 100);
+                  const heightPct = Math.min((opH / tinggiValid) * 100, 100);
+                  const leftPct = Math.min((opLeft / lebarValid) * 100, 100);
+                  const bottomPct = Math.min((opBottom / tinggiValid) * 100, 100);
+                  const isJendela = opBottom > 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        width: `${widthPct}%`,
+                        height: `${heightPct}%`,
+                        left: `${leftPct}%`,
+                        bottom: `${bottomPct}%`,
+                      }}
+                      className={`absolute z-15 transition-all duration-200 flex flex-col items-center justify-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.28)] ${
+                        isJendela
+                          ? 'bg-gradient-to-b from-sky-100 via-stone-50 to-stone-100 border-[3px] border-stone-800'
+                          : 'bg-gradient-to-b from-stone-100 to-stone-200 border-x-[3px] border-t-[3px] border-stone-800'
+                      }`}
+                    >
+                      {isJendela && (
+                        <div className="w-[1px] h-full bg-stone-400/60 absolute" />
+                      )}
+                      {!isJendela && (
+                        <div className="w-1.5 h-3 rounded-full bg-stone-500 absolute right-1.5 top-1/2" />
+                      )}
+
+                      <div className="relative z-10 bg-white/95 px-2 py-0.5 rounded border border-stone-300 text-center shadow-2xs">
+                        <p className="text-[10px] font-bold text-stone-800 leading-tight">
+                          {item.nama}
+                        </p>
+                        <p className="text-[9px] font-mono text-stone-500 leading-tight">
+                          {opW}×{opH}m
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {/* ─── LAYER PENCAHAYAAN RUANGAN ─── */}
               <div
                 className="absolute inset-0 pointer-events-none z-10"
                 style={{
@@ -264,16 +315,12 @@ export default function Visualizer({
                 }}
               />
 
-              {/* ─── LAYER SIMULASI FURNITUR RUANG TV (OPSIONAL) ─── */}
+              {/* ─── LAYER SIMULASI FURNITUR RUANG TV ─── */}
               {showTvRoom && (
                 <div className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-end">
-                  {/* Layar TV Gantung + Backlight LED Hangat */}
                   <div className="w-[44%] max-w-[230px] aspect-video mb-[11%] relative flex items-center justify-center">
-                    {/* Pendaran LED Backlight di belakang TV */}
                     <div className="absolute -inset-2 bg-amber-300/35 blur-md rounded-lg" />
-                    {/* Bingkai Layar TV */}
                     <div className="w-full h-full bg-gradient-to-tr from-stone-950 via-stone-900 to-stone-800 rounded-xs border-2 border-stone-700 shadow-[0_12px_24px_rgba(0,0,0,0.75)] relative overflow-hidden">
-                      {/* Refleksi layar kaca */}
                       <div
                         className="w-full h-full opacity-30"
                         style={{
@@ -284,7 +331,6 @@ export default function Visualizer({
                     </div>
                   </div>
 
-                  {/* Meja Konsol / Credenza TV Minimalis di Bawah */}
                   <div className="w-[62%] max-w-[320px] h-[7%] min-h-[18px] bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-amber-400/40 shadow-[0_-4px_12px_rgba(0,0,0,0.45)] flex items-center justify-around px-3">
                     <div className="w-1/3 h-[1px] bg-stone-600/60" />
                     <div className="w-1/3 h-[1px] bg-stone-600/60" />
@@ -293,7 +339,7 @@ export default function Visualizer({
               )}
             </div>
 
-            {/* 3. Plint Lantai (Skirting) & Lantai Kayu */}
+            {/* 3. Plint Lantai & Lantai Kayu */}
             <div className="h-2 w-full bg-stone-800 border-t border-stone-600" />
             <div
               className="h-5 w-full relative"
@@ -306,7 +352,7 @@ export default function Visualizer({
             </div>
           </div>
 
-          {/* ── Garis Dimensi Tinggi di Sisi Kanan Luar ── */}
+          {/* ── Garis Dimensi Tinggi Sisi Kanan Luar ── */}
           <div className="hidden sm:flex flex-col items-center justify-center pl-2 text-[11px] font-mono text-stone-700 shrink-0">
             <div className="h-full border-y border-stone-400 flex items-center justify-center relative px-1">
               <div className="h-full border-r border-stone-400 absolute" />
@@ -321,6 +367,9 @@ export default function Visualizer({
         <div className="w-full flex flex-wrap items-center justify-between text-[11px] text-stone-500 mt-2.5 px-1 gap-2">
           <span>
             Bidang: <strong className="text-stone-700">{lebarValid}m × {tinggiValid}m</strong>
+            {openings.length > 0 && (
+              <> · {openings.length} Bukaan (Pintu/Jendela)</>
+            )}
             {isFrameMode && (
               <> · Bingkai Sisi {sideWidth.toFixed(2)}m · Atas/Bawah {topBottomHeight.toFixed(2)}m</>
             )}
