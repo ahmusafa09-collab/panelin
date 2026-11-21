@@ -17,7 +17,8 @@ export default function Visualizer({
   isMobileSticky = true,
   onToggleMobileSticky = () => {},
 }) {
-  const [showTvRoom, setShowTvRoom] = useState(true);
+  const [roomPreset, setRoomPreset] = useState('tv'); // 'polos' | 'tv' | 'kamar'
+  const [lightingMode, setLightingMode] = useState('siang'); // 'siang' | 'malam'
   const [is3DMode, setIs3DMode] = useState(false);
   const [yawAngle, setYawAngle] = useState(-18); // Sudut pandang (-34° s/d +34°)
   const [sideWallTheme, setSideWallTheme] = useState('krem'); // 'putih' | 'krem' | 'abu'
@@ -126,28 +127,48 @@ export default function Visualizer({
     };
   })();
 
+  const isNight = lightingMode === 'malam';
+
   // Palet Warna Cat Dinding Samping
   const sideWallPalette = {
     putih: {
       label: 'Putih',
       dot: 'bg-stone-100 border-stone-400',
-      leftBg: 'linear-gradient(to right, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
-      rightBg: 'linear-gradient(to left, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
-      ceilingBg: 'linear-gradient(to bottom, #e7e5e4 0%, #f5f5f4 40%, #ffffff 100%)',
+      leftBg: isNight
+        ? 'linear-gradient(to right, #78716c 0%, #a8a29e 45%, #d6d3d1 100%)'
+        : 'linear-gradient(to right, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
+      rightBg: isNight
+        ? 'linear-gradient(to left, #78716c 0%, #a8a29e 45%, #d6d3d1 100%)'
+        : 'linear-gradient(to left, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
+      ceilingBg: isNight
+        ? 'linear-gradient(to bottom, #78716c 0%, #a8a29e 40%, #d6d3d1 100%)'
+        : 'linear-gradient(to bottom, #e7e5e4 0%, #f5f5f4 40%, #ffffff 100%)',
     },
     krem: {
       label: 'Krem',
       dot: 'bg-amber-100 border-amber-400',
-      leftBg: 'linear-gradient(to right, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
-      rightBg: 'linear-gradient(to left, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
-      ceilingBg: 'linear-gradient(to bottom, #d6cbbd 0%, #ebe3d7 40%, #f7f3ec 100%)',
+      leftBg: isNight
+        ? 'linear-gradient(to right, #6b5f51 0%, #948472 45%, #bfb09e 100%)'
+        : 'linear-gradient(to right, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
+      rightBg: isNight
+        ? 'linear-gradient(to left, #6b5f51 0%, #948472 45%, #bfb09e 100%)'
+        : 'linear-gradient(to left, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
+      ceilingBg: isNight
+        ? 'linear-gradient(to bottom, #7d7062 0%, #a69786 40%, #cbbba8 100%)'
+        : 'linear-gradient(to bottom, #d6cbbd 0%, #ebe3d7 40%, #f7f3ec 100%)',
     },
     abu: {
       label: 'Abu',
       dot: 'bg-stone-500 border-stone-700',
-      leftBg: 'linear-gradient(to right, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
-      rightBg: 'linear-gradient(to left, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
-      ceilingBg: 'linear-gradient(to bottom, #a8a29e 0%, #d6d3d1 40%, #e7e5e4 100%)',
+      leftBg: isNight
+        ? 'linear-gradient(to right, #292524 0%, #44403c 45%, #78716c 100%)'
+        : 'linear-gradient(to right, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
+      rightBg: isNight
+        ? 'linear-gradient(to left, #292524 0%, #44403c 45%, #78716c 100%)'
+        : 'linear-gradient(to left, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
+      ceilingBg: isNight
+        ? 'linear-gradient(to bottom, #57534e 0%, #78716c 40%, #a8a29e 100%)'
+        : 'linear-gradient(to bottom, #a8a29e 0%, #d6d3d1 40%, #e7e5e4 100%)',
     },
   }[sideWallTheme];
 
@@ -204,11 +225,9 @@ export default function Visualizer({
       canvas.height = headerH + wallH + footerH;
       const ctx = canvas.getContext('2d');
 
-      // Latar kartu showroom
       ctx.fillStyle = '#1c1917';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Header judul simulasi
       ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 24px sans-serif';
       ctx.fillText('PANELIN · Simulasi Desain Dinding', 60, 44);
@@ -223,7 +242,6 @@ export default function Visualizer({
       const wx = (baseWidth - wallW) / 2;
       const wy = headerH;
 
-      // Gambar tekstur panel utama (tiling)
       ctx.save();
       ctx.beginPath();
       ctx.rect(wx, wy, wallW, wallH);
@@ -244,7 +262,6 @@ export default function Visualizer({
         }
       }
 
-      // Panel Tengah jika Mode Mix aktif
       if (activeMix && centerImg) {
         const cw = (centerWidthPct / 100) * wallW;
         const ch = (centerHeightPct / 100) * wallH;
@@ -274,7 +291,6 @@ export default function Visualizer({
         }
         ctx.restore();
 
-        // Garis List H di sekeliling / sisi panel tengah
         ctx.strokeStyle = listHStyle.hex;
         ctx.lineWidth = useListH ? 6 : 3;
         if (isFrameMode) {
@@ -289,7 +305,6 @@ export default function Visualizer({
         }
       }
 
-      // Garis Sambungan Horizontal (> 2.9m)
       if (isTinggiLebih) {
         const seamY = wy + wallH - (horizontalSeamPosBottom / 100) * wallH;
         ctx.strokeStyle = useListH ? listHStyle.hex : '#fbbf24';
@@ -302,7 +317,6 @@ export default function Visualizer({
         ctx.setLineDash([]);
       }
 
-      // Bukaan Pintu / Jendela
       openings.forEach((item) => {
         const opW = Math.max(Number(item.lebar) || 0, 0);
         const opH = Math.max(Number(item.tinggi) || 0, 0);
@@ -328,24 +342,28 @@ export default function Visualizer({
         ctx.textAlign = 'left';
       });
 
+      if (isNight) {
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.14)';
+        ctx.fillRect(wx, wy, wallW, wallH);
+      }
+
       ctx.restore();
 
-      // Lantai kayu bawah
       ctx.fillStyle = '#6b4930';
       ctx.fillRect(wx, wy + wallH, wallW, 18);
 
-      // Footer info
       ctx.fillStyle = '#a8a29e';
       ctx.font = '15px sans-serif';
       const aksesorisText = [
         useListH ? `List H ${listHColor}` : null,
         useListLWpc ? 'List L WPC' : null,
+        isNight ? 'Pencahayaan Malam LED' : null,
       ]
         .filter(Boolean)
         .join(' · ');
       ctx.fillText(
         aksesorisText
-          ? `Aksesoris: ${aksesorisText}`
+          ? `Catatan: ${aksesorisText}`
           : 'Simulasi visual proporsional PANELIN Showroom Studio',
         60,
         canvas.height - 26
@@ -363,6 +381,8 @@ export default function Visualizer({
   const activeYaw = is3DMode ? yawAngle : 0;
   const directionalShade = activeYaw / 38;
   const roomDepth = isCompact ? 130 : 240;
+  const bedLength3D = isCompact ? 76 : 148; // Panjang kasur menjorok ke depan (px)
+  const credenzaDepth3D = isCompact ? 24 : 44; // Ketebalan credenza TV ke depan (px)
 
   const isOuterWpc = activeProduct.tipe === 'WPC';
   const isCenterWpc = activeMix && centerProduct?.tipe === 'WPC';
@@ -372,7 +392,7 @@ export default function Visualizer({
       {/* ── Bar Kontrol Atas ── */}
       <div
         className={`w-full max-w-xl flex flex-wrap items-center justify-between gap-2 px-0.5 transition-all duration-300 ${
-          isCompact ? 'mb-1.5' : 'mb-3'
+          isCompact ? 'mb-1.5' : 'mb-2.5'
         }`}
       >
         <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm min-w-0">
@@ -410,9 +430,8 @@ export default function Visualizer({
           )}
         </div>
 
-        {/* Grup Tombol Kanan */}
+        {/* Grup Tombol Kanan: Switch 2D/3D, Simpan Gambar, & Pin HP */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Switch 2D vs 3D Ruangan */}
           <div className="flex items-center rounded-xl bg-stone-200/90 p-0.5 border border-stone-300/70">
             <button
               type="button"
@@ -442,14 +461,13 @@ export default function Visualizer({
             </button>
           </div>
 
-          {/* Tombol Simpan Gambar Preview */}
           {!isCompact && (
             <button
               type="button"
               onClick={handleSaveSnapshot}
               disabled={isSavingImg}
               title="Simpan gambar simulasi untuk dikirim ke klien"
-              className="min-h-[40px] sm:min-h-[42px] px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 transition cursor-pointer shadow-2xs flex items-center gap-1.5"
+              className="min-h-[40px] px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 transition cursor-pointer shadow-2xs flex items-center gap-1.5"
             >
               <svg
                 className="w-3.5 h-3.5 text-amber-600 shrink-0"
@@ -470,7 +488,6 @@ export default function Visualizer({
             </button>
           )}
 
-          {/* Tombol Pin/Lepas Sticky khusus Layar HP */}
           <button
             type="button"
             onClick={onToggleMobileSticky}
@@ -500,43 +517,65 @@ export default function Visualizer({
               <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
             </svg>
           </button>
-
-          {/* Tombol Toggle Furnitur TV */}
-          <button
-            type="button"
-            onClick={() => setShowTvRoom((prev) => !prev)}
-            className={`${
-              isCompact
-                ? 'min-h-[34px] px-2.5'
-                : 'min-h-[40px] sm:min-h-[42px] px-3'
-            } rounded-xl text-[11px] sm:text-xs font-bold border transition cursor-pointer shadow-2xs flex items-center gap-1.5 ${
-              showTvRoom
-                ? 'bg-stone-900 text-amber-300 border-stone-800 hover:bg-stone-800'
-                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-            }`}
-          >
-            <svg
-              className="w-3.5 h-3.5 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="4" width="20" height="13" rx="2" />
-              <path d="M8 21h8" />
-              <path d="M12 17v4" />
-            </svg>
-            <span>{isCompact ? 'TV' : showTvRoom ? 'TV: On' : 'TV: Off'}</span>
-          </button>
         </div>
       </div>
+
+      {/* ── Bar Preset Ruangan (Polos / Ruang TV / Kamar Tidur) & Lampu Siang/Malam ── */}
+      {!isCompact && (
+        <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-2 mb-2.5 px-0.5">
+          <div className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-200/90 gap-1">
+            {[
+              { id: 'polos', label: 'Polos' },
+              { id: 'tv', label: 'Ruang TV' },
+              { id: 'kamar', label: 'Kamar Tidur' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setRoomPreset(item.id)}
+                className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                  roomPreset === item.id
+                    ? 'bg-stone-900 text-amber-300 shadow-2xs'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-200/90 gap-1">
+            <button
+              type="button"
+              onClick={() => setLightingMode('siang')}
+              className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                lightingMode === 'siang'
+                  ? 'bg-white text-stone-900 shadow-2xs border border-stone-200'
+                  : 'text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <span>☀️</span>
+              <span>Siang</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLightingMode('malam')}
+              className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                lightingMode === 'malam'
+                  ? 'bg-stone-950 text-amber-300 shadow-2xs'
+                  : 'text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <span>🌙</span>
+              <span>Malam LED</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Panel Kontrol Putar Sudut 3D + Pilihan Warna Cat Dinding Samping ── */}
       {is3DMode && !isCompact && (
         <div className="w-full max-w-xl mb-2.5 px-3 py-2 rounded-xl bg-stone-900 text-stone-200 flex flex-wrap items-center justify-between gap-2.5 text-xs shadow-xs">
-          {/* Preset Sudut */}
           <div className="flex items-center gap-1">
             {[
               { label: 'Kiri', val: -26 },
@@ -558,7 +597,6 @@ export default function Visualizer({
             ))}
           </div>
 
-          {/* Pilihan Warna Tembok Samping */}
           <div className="flex items-center gap-1.5 bg-stone-800/90 px-2 py-1 rounded-lg border border-stone-700">
             <span className="text-[10px] text-stone-400">Cat Samping:</span>
             {[
@@ -580,7 +618,6 @@ export default function Visualizer({
             ))}
           </div>
 
-          {/* Slider Sudut */}
           <div className="flex items-center gap-1.5 flex-1 min-w-[130px] max-w-[200px]">
             <input
               type="range"
@@ -686,7 +723,7 @@ export default function Visualizer({
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 left-0 right-0 origin-top pointer-events-none flex items-center justify-around border-b border-stone-400/50 transition-colors duration-300"
+                  className="absolute top-0 left-0 right-0 origin-top pointer-events-none flex items-center justify-around border-b border-stone-400/50 transition-all duration-300"
                   style={{
                     height: `${roomDepth}px`,
                     transform: 'rotateX(90deg)',
@@ -694,9 +731,16 @@ export default function Visualizer({
                     boxShadow: 'inset 0 28px 45px rgba(0,0,0,0.4)',
                   }}
                 >
-                  <span className="w-8 h-3 rounded-full bg-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.95)]" />
-                  <span className="w-8 h-3 rounded-full bg-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.95)]" />
-                  <span className="w-8 h-3 rounded-full bg-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.95)]" />
+                  {[0, 1, 2].map((lamp) => (
+                    <span
+                      key={lamp}
+                      className={`w-8 h-3 rounded-full transition-all duration-300 ${
+                        isNight
+                          ? 'bg-amber-200 shadow-[0_0_32px_rgba(251,191,36,1)]'
+                          : 'bg-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.75)]'
+                      }`}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -704,7 +748,7 @@ export default function Visualizer({
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 bottom-0 left-0 origin-left pointer-events-none transition-colors duration-300"
+                  className="absolute top-0 bottom-0 left-0 origin-left pointer-events-none transition-all duration-300"
                   style={{
                     width: `${roomDepth}px`,
                     transform: 'rotateY(-90deg)',
@@ -721,7 +765,7 @@ export default function Visualizer({
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 bottom-0 right-0 origin-right pointer-events-none transition-colors duration-300"
+                  className="absolute top-0 bottom-0 right-0 origin-right pointer-events-none transition-all duration-300"
                   style={{
                     width: `${roomDepth}px`,
                     transform: 'rotateY(90deg)',
@@ -741,9 +785,16 @@ export default function Visualizer({
                     isCompact ? 'h-2' : 'h-3.5'
                   } w-full bg-gradient-to-b from-stone-200 to-stone-300 border-b border-stone-400/60 relative flex items-center justify-around transition-all duration-300`}
                 >
-                  <span className="w-5 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
-                  <span className="w-5 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
-                  <span className="w-5 h-1 rounded-full bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.9)]" />
+                  {[0, 1, 2].map((lamp) => (
+                    <span
+                      key={lamp}
+                      className={`w-5 h-1 rounded-full transition-all duration-300 ${
+                        isNight
+                          ? 'bg-amber-200 shadow-[0_2px_14px_rgba(251,191,36,1)]'
+                          : 'bg-amber-100 shadow-[0_2px_10px_rgba(251,191,36,0.85)]'
+                      }`}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -751,228 +802,256 @@ export default function Visualizer({
               <div
                 className={`w-full ${
                   isCompact ? 'max-h-[155px]' : 'max-h-[340px] sm:max-h-[390px]'
-                } relative overflow-hidden bg-stone-200 transition-all duration-300`}
+                } relative bg-stone-200 transition-all duration-300 ${
+                  is3DMode ? 'overflow-visible' : 'overflow-hidden'
+                }`}
                 style={{
                   aspectRatio: `${aspectRatio}`,
                   transformStyle: is3DMode ? 'preserve-3d' : undefined,
                 }}
               >
-                {activeMix ? (
-                  <div
-                    className="w-full h-full relative flex items-center justify-center"
-                    style={{
-                      backgroundImage: `url(${gambarPanel})`,
-                      backgroundRepeat: 'repeat',
-                      backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
-                      backgroundPosition: 'left bottom',
-                    }}
-                  >
-                    {/* Efek Relief Kisi-Kisi WPC untuk Panel Luar */}
-                    {is3DMode && isOuterWpc && (
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          backgroundImage:
-                            'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
-                        }}
-                      />
-                    )}
-
-                    {/* Panel Fokus Tengah */}
+                {/* Layer Clipping khusus Tekstur Panel & Garis Sambungan Dinding */}
+                <div className="absolute inset-0 overflow-hidden">
+                  {activeMix ? (
                     <div
-                      className={`relative transition-all duration-500 ${
-                        is3DMode
-                          ? 'shadow-[0_14px_28px_rgba(0,0,0,0.72)]'
-                          : 'shadow-[0_10px_28px_rgba(0,0,0,0.55)]'
-                      } ${
-                        isFrameMode
-                          ? `${useListH ? 'ring-[3px] sm:ring-[4px]' : 'ring-2'} ${listHStyle.ringClass}`
-                          : `${useListH ? 'border-x-[3px] sm:border-x-[4px]' : 'border-x-2'} ${listHStyle.borderClass}`
-                      }`}
+                      className="w-full h-full relative flex items-center justify-center"
                       style={{
-                        width: `${centerWidthPct}%`,
-                        height: `${centerHeightPct}%`,
-                        backgroundImage: `url(${centerProduct.gambar2D})`,
+                        backgroundImage: `url(${gambarPanel})`,
                         backgroundRepeat: 'repeat',
-                        backgroundSize: `${centerTileWidthPct}% ${centerTileHeightPct}%`,
-                        backgroundPosition: 'center bottom',
-                        transform: is3DMode ? 'translateZ(10px)' : undefined,
+                        backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
+                        backgroundPosition: 'left bottom',
                       }}
                     >
-                      {/* Efek Relief Kisi-Kisi WPC jika Panel Tengah adalah WPC */}
-                      {is3DMode && isCenterWpc && (
+                      {is3DMode && isOuterWpc && (
                         <div
                           className="absolute inset-0 pointer-events-none"
                           style={{
                             backgroundImage:
-                              'repeating-linear-gradient(90deg, rgba(0,0,0,0.36) 0px, transparent 3px, rgba(255,255,255,0.14) 6px, rgba(0,0,0,0.36) 11px)',
+                              'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
                           }}
                         />
                       )}
 
                       <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background:
-                            'linear-gradient(125deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.14) 100%)',
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : gambarPanel ? (
-                  <div
-                    className="w-full h-full relative"
-                    style={{
-                      backgroundImage: `url(${gambarPanel})`,
-                      backgroundRepeat: 'repeat',
-                      backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
-                      backgroundPosition: 'left bottom',
-                    }}
-                  >
-                    {/* Efek Relief Kisi-Kisi 3D Khusus WPC */}
-                    {is3DMode && isOuterWpc && (
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          backgroundImage:
-                            'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
-                        }}
-                      />
-                    )}
-
-                    {verticalSeams.map(({ pos, nomor }) => (
-                      <div
-                        key={nomor}
-                        className="absolute top-0 bottom-0 pointer-events-none"
-                        style={{ left: `${pos}%` }}
-                      >
-                        <div className="w-[1px] h-full bg-black/30" />
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* Animasi List L / Siku WPC */}
-                <div
-                  className={`absolute inset-y-0 left-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-r from-amber-900/95 via-amber-700/85 to-transparent ${
-                    useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
-                  }`}
-                />
-                <div
-                  className={`absolute inset-y-0 right-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-l from-amber-900/95 via-amber-700/85 to-transparent ${
-                    useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
-                  }`}
-                />
-
-                {/* Garis Sambungan Horizontal (> 2.9m) */}
-                {isTinggiLebih && (
-                  <div
-                    className="absolute left-0 right-0 pointer-events-none z-15 flex items-center"
-                    style={{ bottom: `${horizontalSeamPosBottom}%` }}
-                  >
-                    <div
-                      className={`transition-all duration-500 ${
-                        useListH
-                          ? `w-full h-[3px] sm:h-[4px] ${listHStyle.barClass}`
-                          : 'w-full border-b border-dashed border-amber-400/90'
-                      }`}
-                    />
-                    {!isCompact && (
-                      <span className="ml-2 -mt-5 bg-stone-900/90 text-amber-300 text-[9px] font-semibold px-2 py-0.5 rounded backdrop-blur-xs shadow-xs whitespace-nowrap">
-                        {useListH
-                          ? `List H ${listHColor} (${tinggiPanelMeter}m)`
-                          : `Sambungan (${tinggiPanelMeter}m)`}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Layer Bukaan Dinding (Pintu / Jendela) */}
-                {lebarValid > 0 &&
-                  tinggiValid > 0 &&
-                  openings.map((item) => {
-                    const opW = Math.max(Number(item.lebar) || 0, 0);
-                    const opH = Math.max(Number(item.tinggi) || 0, 0);
-                    const opLeft = Math.max(Number(item.jarakKiri) || 0, 0);
-                    const opBottom = Math.max(Number(item.jarakBawah) || 0, 0);
-
-                    if (opW <= 0 || opH <= 0) return null;
-
-                    const widthPct = Math.min((opW / lebarValid) * 100, 100);
-                    const heightPct = Math.min((opH / tinggiValid) * 100, 100);
-                    const leftPct = Math.min((opLeft / lebarValid) * 100, 100);
-                    const bottomPct = Math.min((opBottom / tinggiValid) * 100, 100);
-                    const isJendela = opBottom > 0;
-
-                    return (
-                      <div
-                        key={item.id}
-                        style={{
-                          width: `${widthPct}%`,
-                          height: `${heightPct}%`,
-                          left: `${leftPct}%`,
-                          bottom: `${bottomPct}%`,
-                        }}
-                        className={`absolute z-15 transition-all duration-200 flex flex-col items-center justify-center shadow-[inset_0_4px_14px_rgba(0,0,0,0.42)] ${
-                          isJendela
-                            ? 'bg-gradient-to-b from-sky-100 via-stone-50 to-stone-100 border-2 sm:border-[3px] border-stone-800'
-                            : 'bg-gradient-to-b from-stone-100 to-stone-200 border-x-2 sm:border-x-[3px] border-t-2 sm:border-t-[3px] border-stone-800'
+                        className={`relative transition-all duration-500 ${
+                          is3DMode
+                            ? 'shadow-[0_14px_28px_rgba(0,0,0,0.72)]'
+                            : 'shadow-[0_10px_28px_rgba(0,0,0,0.55)]'
+                        } ${
+                          isFrameMode
+                            ? `${useListH ? 'ring-[3px] sm:ring-[4px]' : 'ring-2'} ${listHStyle.ringClass}`
+                            : `${useListH ? 'border-x-[3px] sm:border-x-[4px]' : 'border-x-2'} ${listHStyle.borderClass}`
                         }`}
+                        style={{
+                          width: `${centerWidthPct}%`,
+                          height: `${centerHeightPct}%`,
+                          backgroundImage: `url(${centerProduct.gambar2D})`,
+                          backgroundRepeat: 'repeat',
+                          backgroundSize: `${centerTileWidthPct}% ${centerTileHeightPct}%`,
+                          backgroundPosition: 'center bottom',
+                        }}
                       >
-                        {isJendela && (
-                          <div className="w-[1px] h-full bg-stone-400/60 absolute" />
-                        )}
-                        {!isJendela && (
-                          <div className="w-1 h-2.5 rounded-full bg-stone-500 absolute right-1 top-1/2" />
+                        {is3DMode && isCenterWpc && (
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                              backgroundImage:
+                                'repeating-linear-gradient(90deg, rgba(0,0,0,0.36) 0px, transparent 3px, rgba(255,255,255,0.14) 6px, rgba(0,0,0,0.36) 11px)',
+                            }}
+                          />
                         )}
 
-                        {!isCompact && (
-                          <div className="relative z-10 bg-white/95 px-1.5 py-0.5 rounded border border-stone-300 text-center shadow-2xs">
-                            <p className="text-[9px] sm:text-[10px] font-bold text-stone-800 leading-tight">
-                              {item.nama}
-                            </p>
-                            <p className="text-[8px] sm:text-[9px] font-mono text-stone-500 leading-tight">
-                              {opW}×{opH}m
-                            </p>
-                          </div>
-                        )}
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background:
+                              'linear-gradient(125deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.14) 100%)',
+                          }}
+                        />
                       </div>
-                    );
-                  })}
+                    </div>
+                  ) : gambarPanel ? (
+                    <div
+                      className="w-full h-full relative"
+                      style={{
+                        backgroundImage: `url(${gambarPanel})`,
+                        backgroundRepeat: 'repeat',
+                        backgroundSize: `${lebarPanelPercent}% ${tinggiPanelPercent}%`,
+                        backgroundPosition: 'left bottom',
+                      }}
+                    >
+                      {is3DMode && isOuterWpc && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            backgroundImage:
+                              'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
+                          }}
+                        />
+                      )}
 
-                {/* Bayangan Sudut Pertemuan Dinding (Ambient Occlusion 3D) */}
-                <div
-                  className="absolute inset-0 pointer-events-none z-10 transition-all duration-300"
-                  style={{
-                    boxShadow: is3DMode
-                      ? 'inset 0 0 46px rgba(0,0,0,0.58)'
-                      : undefined,
-                    background: `
-                      radial-gradient(ellipse 80% 45% at 50% 0%, rgba(255, 244, 214, 0.3) 0%, transparent 75%),
-                      linear-gradient(to right, rgba(0,0,0,${Math.max(
-                        0.26 + directionalShade * 0.22,
-                        0.08
-                      )}) 0%, transparent 20%, transparent 80%, rgba(0,0,0,${Math.max(
-                      0.26 - directionalShade * 0.22,
-                      0.08
-                    )}) 100%),
-                      linear-gradient(to bottom, rgba(0,0,0,0.32) 0%, transparent 14%, transparent 84%, rgba(0,0,0,0.42) 100%)
-                    `,
-                  }}
-                />
+                      {verticalSeams.map(({ pos, nomor }) => (
+                        <div
+                          key={nomor}
+                          className="absolute top-0 bottom-0 pointer-events-none"
+                          style={{ left: `${pos}%` }}
+                        >
+                          <div className="w-[1px] h-full bg-black/30" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
 
-                {/* Layer Simulasi Furnitur Ruang TV */}
-                {showTvRoom && (
+                  {/* Animasi List L / Siku WPC */}
+                  <div
+                    className={`absolute inset-y-0 left-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-r from-amber-900/95 via-amber-700/85 to-transparent ${
+                      useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
+                    }`}
+                  />
+                  <div
+                    className={`absolute inset-y-0 right-0 z-15 pointer-events-none transition-all duration-500 bg-gradient-to-l from-amber-900/95 via-amber-700/85 to-transparent ${
+                      useListLWpc ? 'w-2 opacity-100' : 'w-0 opacity-0'
+                    }`}
+                  />
+
+                  {/* Garis Sambungan Horizontal (> 2.9m) */}
+                  {isTinggiLebih && (
+                    <div
+                      className="absolute left-0 right-0 pointer-events-none z-15 flex items-center"
+                      style={{ bottom: `${horizontalSeamPosBottom}%` }}
+                    >
+                      <div
+                        className={`transition-all duration-500 ${
+                          useListH
+                            ? `w-full h-[3px] sm:h-[4px] ${listHStyle.barClass}`
+                            : 'w-full border-b border-dashed border-amber-400/90'
+                        }`}
+                      />
+                      {!isCompact && (
+                        <span className="ml-2 -mt-5 bg-stone-900/90 text-amber-300 text-[9px] font-semibold px-2 py-0.5 rounded backdrop-blur-xs shadow-xs whitespace-nowrap">
+                          {useListH
+                            ? `List H ${listHColor} (${tinggiPanelMeter}m)`
+                            : `Sambungan (${tinggiPanelMeter}m)`}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Layer Bukaan Dinding (Pintu / Jendela) */}
+                  {lebarValid > 0 &&
+                    tinggiValid > 0 &&
+                    openings.map((item) => {
+                      const opW = Math.max(Number(item.lebar) || 0, 0);
+                      const opH = Math.max(Number(item.tinggi) || 0, 0);
+                      const opLeft = Math.max(Number(item.jarakKiri) || 0, 0);
+                      const opBottom = Math.max(Number(item.jarakBawah) || 0, 0);
+
+                      if (opW <= 0 || opH <= 0) return null;
+
+                      const widthPct = Math.min((opW / lebarValid) * 100, 100);
+                      const heightPct = Math.min((opH / tinggiValid) * 100, 100);
+                      const leftPct = Math.min((opLeft / lebarValid) * 100, 100);
+                      const bottomPct = Math.min((opBottom / tinggiValid) * 100, 100);
+                      const isJendela = opBottom > 0;
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            width: `${widthPct}%`,
+                            height: `${heightPct}%`,
+                            left: `${leftPct}%`,
+                            bottom: `${bottomPct}%`,
+                          }}
+                          className={`absolute z-15 transition-all duration-200 flex flex-col items-center justify-center shadow-[inset_0_4px_14px_rgba(0,0,0,0.42)] ${
+                            isJendela
+                              ? 'bg-gradient-to-b from-sky-100 via-stone-50 to-stone-100 border-2 sm:border-[3px] border-stone-800'
+                              : 'bg-gradient-to-b from-stone-100 to-stone-200 border-x-2 sm:border-x-[3px] border-t-2 sm:border-t-[3px] border-stone-800'
+                          }`}
+                        >
+                          {isJendela && (
+                            <div className="w-[1px] h-full bg-stone-400/60 absolute" />
+                          )}
+                          {!isJendela && (
+                            <div className="w-1 h-2.5 rounded-full bg-stone-500 absolute right-1 top-1/2" />
+                          )}
+
+                          {!isCompact && (
+                            <div className="relative z-10 bg-white/95 px-1.5 py-0.5 rounded border border-stone-300 text-center shadow-2xs">
+                              <p className="text-[9px] sm:text-[10px] font-bold text-stone-800 leading-tight">
+                                {item.nama}
+                              </p>
+                              <p className="text-[8px] sm:text-[9px] font-mono text-stone-500 leading-tight">
+                                {opW}×{opH}m
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                  {/* Layer Pencahayaan Ruangan (Siang Alami vs Malam Warm Downlight LED) */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-10 transition-all duration-500"
+                    style={{
+                      boxShadow: is3DMode
+                        ? 'inset 0 0 46px rgba(0,0,0,0.58)'
+                        : undefined,
+                      background: isNight
+                        ? `
+                          radial-gradient(ellipse 22% 58% at 22% 0%, rgba(253, 224, 71, 0.34) 0%, transparent 80%),
+                          radial-gradient(ellipse 22% 58% at 50% 0%, rgba(253, 224, 71, 0.38) 0%, transparent 80%),
+                          radial-gradient(ellipse 22% 58% at 78% 0%, rgba(253, 224, 71, 0.34) 0%, transparent 80%),
+                          linear-gradient(to bottom, rgba(12, 10, 9, 0.32) 0%, rgba(245, 158, 11, 0.08) 45%, rgba(12, 10, 9, 0.56) 100%),
+                          linear-gradient(to right, rgba(0,0,0,${Math.max(
+                            0.34 + directionalShade * 0.22,
+                            0.12
+                          )}) 0%, transparent 22%, transparent 78%, rgba(0,0,0,${Math.max(
+                            0.34 - directionalShade * 0.22,
+                            0.12
+                          )}) 100%)
+                        `
+                        : `
+                          radial-gradient(ellipse 80% 45% at 50% 0%, rgba(255, 244, 214, 0.3) 0%, transparent 75%),
+                          linear-gradient(to right, rgba(0,0,0,${Math.max(
+                            0.26 + directionalShade * 0.22,
+                            0.08
+                          )}) 0%, transparent 20%, transparent 80%, rgba(0,0,0,${Math.max(
+                            0.26 - directionalShade * 0.22,
+                            0.08
+                          )}) 100%),
+                          linear-gradient(to bottom, rgba(0,0,0,0.32) 0%, transparent 14%, transparent 84%, rgba(0,0,0,0.42) 100%)
+                        `,
+                    }}
+                  />
+                </div>
+
+                {/* ─── LAYER PRESET FURNITUR (RUANG TV / KAMAR TIDUR 3D & 2D) ─── */}
+                {roomPreset === 'tv' && (
                   <div
                     className="absolute inset-0 pointer-events-none z-20 flex flex-col items-center justify-end"
                     style={
                       is3DMode
-                        ? { transform: 'translateZ(16px)' }
+                        ? { transformStyle: 'preserve-3d' }
                         : undefined
                     }
                   >
-                    <div className="w-[44%] max-w-[230px] aspect-video mb-[11%] relative flex items-center justify-center">
-                      <div className="absolute -inset-2 bg-amber-300/35 blur-md rounded-lg" />
+                    {/* TV Gantung */}
+                    <div
+                      className="w-[44%] max-w-[230px] aspect-video mb-[11%] relative flex items-center justify-center"
+                      style={
+                        is3DMode
+                          ? { transform: 'translateZ(14px)' }
+                          : undefined
+                      }
+                    >
+                      <div
+                        className={`absolute -inset-2 rounded-lg transition-all duration-500 ${
+                          isNight
+                            ? 'bg-amber-300/65 blur-lg'
+                            : 'bg-amber-300/35 blur-md'
+                        }`}
+                      />
                       <div className="w-full h-full bg-gradient-to-tr from-stone-950 via-stone-900 to-stone-800 rounded-xs border-2 border-stone-700 shadow-[0_14px_28px_rgba(0,0,0,0.8)] relative overflow-hidden">
                         <div
                           className="w-full h-full opacity-30"
@@ -984,9 +1063,185 @@ export default function Visualizer({
                       </div>
                     </div>
 
-                    <div className="w-[62%] max-w-[320px] h-[7%] min-h-[12px] bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-amber-400/40 shadow-[0_-4px_14px_rgba(0,0,0,0.55)] flex items-center justify-around px-3">
-                      <div className="w-1/3 h-[1px] bg-stone-600/60" />
-                      <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                    {/* Meja Credenza TV (3D Blok saat mode 3D aktif) */}
+                    {is3DMode ? (
+                      <div
+                        className="w-[62%] max-w-[320px] h-[7%] min-h-[14px] relative"
+                        style={{
+                          transformStyle: 'preserve-3d',
+                          transform: `translateZ(${credenzaDepth3D}px)`,
+                        }}
+                      >
+                        {/* Muka Depan Credenza */}
+                        <div className="w-full h-full bg-gradient-to-b from-stone-800 to-stone-950 border-t border-amber-400/50 shadow-[0_10px_20px_rgba(0,0,0,0.75)] flex items-center justify-around px-3">
+                          <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                          <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                        </div>
+                        {/* Permukaan Atas Credenza */}
+                        <div
+                          className="absolute top-0 left-0 right-0 origin-top bg-gradient-to-b from-stone-700 to-stone-800 border-t border-stone-600"
+                          style={{
+                            height: `${credenzaDepth3D}px`,
+                            transform: 'rotateX(-90deg)',
+                          }}
+                        />
+                        {/* Sisi Kiri & Kanan Credenza */}
+                        <div
+                          className="absolute top-0 bottom-0 left-0 origin-left bg-stone-900 border-r border-stone-700"
+                          style={{
+                            width: `${credenzaDepth3D}px`,
+                            transform: 'rotateY(90deg)',
+                          }}
+                        />
+                        <div
+                          className="absolute top-0 bottom-0 right-0 origin-right bg-stone-900 border-l border-stone-700"
+                          style={{
+                            width: `${credenzaDepth3D}px`,
+                            transform: 'rotateY(-90deg)',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-[62%] max-w-[320px] h-[7%] min-h-[12px] bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-amber-400/40 shadow-[0_-4px_14px_rgba(0,0,0,0.55)] flex items-center justify-around px-3">
+                        <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                        <div className="w-1/3 h-[1px] bg-stone-600/60" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {roomPreset === 'kamar' && (
+                  <div
+                    className="absolute inset-0 pointer-events-none z-20 flex items-end justify-center gap-2 sm:gap-3 px-4"
+                    style={
+                      is3DMode
+                        ? { transformStyle: 'preserve-3d' }
+                        : undefined
+                    }
+                  >
+                    {/* Nakas & Lampu Tidur Kiri */}
+                    <div
+                      className="w-[13%] max-w-[54px] flex flex-col items-center"
+                      style={
+                        is3DMode
+                          ? { transform: 'translateZ(18px)' }
+                          : undefined
+                      }
+                    >
+                      <div className="relative flex flex-col items-center mb-0.5">
+                        {isNight && (
+                          <div className="absolute -inset-3 bg-amber-300/60 blur-md rounded-full" />
+                        )}
+                        <div className="w-3.5 h-3 bg-amber-100 rounded-t-sm border border-amber-300/80 relative z-10" />
+                        <div className="w-1 h-2 bg-stone-700" />
+                      </div>
+                      <div className="w-full h-6 sm:h-8 bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-stone-600 shadow-md" />
+                    </div>
+
+                    {/* Ranjang (Headboard + Kasur 3D menjorok maju ke depan saat mode 3D) */}
+                    <div
+                      className="w-[52%] max-w-[270px] flex flex-col items-center relative"
+                      style={
+                        is3DMode
+                          ? { transformStyle: 'preserve-3d' }
+                          : undefined
+                      }
+                    >
+                      {/* Headboard Empuk Menempel Dinding */}
+                      <div
+                        className="w-full h-14 sm:h-18 bg-gradient-to-b from-stone-700 via-stone-800 to-stone-900 rounded-t-md border-x border-t border-stone-600 shadow-[0_-4px_16px_rgba(0,0,0,0.55)] flex items-end justify-around px-2 pb-1.5"
+                        style={
+                          is3DMode
+                            ? { transform: 'translateZ(8px)' }
+                            : undefined
+                        }
+                      >
+                        <div className="w-[42%] h-4 sm:h-5 bg-stone-200 rounded-t-sm border border-stone-300 shadow-xs" />
+                        <div className="w-[42%] h-4 sm:h-5 bg-stone-200 rounded-t-sm border border-stone-300 shadow-xs" />
+                      </div>
+
+                      {/* Badan Kasur 3D Sejati vs 2D */}
+                      {is3DMode ? (
+                        <div
+                          className="w-[104%] h-7 sm:h-9 relative"
+                          style={{
+                            transformStyle: 'preserve-3d',
+                            // Geser muka ujung kasur maju sejauh bedLength3D ke arah kamera
+                            transform: `translateZ(${bedLength3D}px)`,
+                          }}
+                        >
+                          {/* 1. Ujung Depan / Kaki Kasur (Divan + Selimut Depan) */}
+                          <div className="w-full h-full flex flex-col shadow-[0_14px_24px_rgba(0,0,0,0.75)]">
+                            <div className="w-full h-1/2 bg-gradient-to-b from-stone-100 to-stone-200 border-t-2 border-amber-500/70" />
+                            <div className="w-full h-1/2 bg-gradient-to-b from-stone-800 to-stone-950 border-t border-stone-700" />
+                          </div>
+
+                          {/* 2. Permukaan Atas Kasur (Sprei & Selimut Membentang dari Headboard ke Depan) */}
+                          <div
+                            className="absolute top-0 left-0 right-0 origin-top flex flex-col justify-between border-x border-stone-300"
+                            style={{
+                              height: `${bedLength3D}px`,
+                              transform: 'rotateX(-90deg)',
+                              background:
+                                'linear-gradient(to bottom, #f5f5f4 0%, #e7e5e4 32%, #d6d3d1 34%, #fafaf9 100%)',
+                              boxShadow: 'inset 0 14px 24px rgba(0,0,0,0.28)',
+                            }}
+                          >
+                            {/* Lipatan Selimut & Bantal di Bagian Kepala */}
+                            <div className="w-full h-[30%] bg-stone-200/90 border-b-2 border-amber-500/60 flex items-center justify-around px-3">
+                              <div className="w-[40%] h-[68%] bg-white rounded-xs shadow-2xs border border-stone-300" />
+                              <div className="w-[40%] h-[68%] bg-white rounded-xs shadow-2xs border border-stone-300" />
+                            </div>
+                          </div>
+
+                          {/* 3. Sisi Samping Kiri Kasur 3D */}
+                          <div
+                            className="absolute top-0 bottom-0 left-0 origin-left flex flex-col"
+                            style={{
+                              width: `${bedLength3D}px`,
+                              transform: 'rotateY(90deg)',
+                              boxShadow: 'inset 0 0 18px rgba(0,0,0,0.35)',
+                            }}
+                          >
+                            <div className="w-full h-1/2 bg-stone-200 border-b border-stone-400" />
+                            <div className="w-full h-1/2 bg-stone-900" />
+                          </div>
+
+                          {/* 4. Sisi Samping Kanan Kasur 3D */}
+                          <div
+                            className="absolute top-0 bottom-0 right-0 origin-right flex flex-col"
+                            style={{
+                              width: `${bedLength3D}px`,
+                              transform: 'rotateY(-90deg)',
+                              boxShadow: 'inset 0 0 18px rgba(0,0,0,0.35)',
+                            }}
+                          >
+                            <div className="w-full h-1/2 bg-stone-200 border-b border-stone-400" />
+                            <div className="w-full h-1/2 bg-stone-900" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-[104%] h-5 sm:h-7 bg-gradient-to-b from-stone-100 to-stone-300 border-t-2 border-amber-500/50 shadow-inner" />
+                      )}
+                    </div>
+
+                    {/* Nakas & Lampu Tidur Kanan */}
+                    <div
+                      className="w-[13%] max-w-[54px] flex flex-col items-center"
+                      style={
+                        is3DMode
+                          ? { transform: 'translateZ(18px)' }
+                          : undefined
+                      }
+                    >
+                      <div className="relative flex flex-col items-center mb-0.5">
+                        {isNight && (
+                          <div className="absolute -inset-3 bg-amber-300/60 blur-md rounded-full" />
+                        )}
+                        <div className="w-3.5 h-3 bg-amber-100 rounded-t-sm border border-amber-300/80 relative z-10" />
+                        <div className="w-1 h-2 bg-stone-700" />
+                      </div>
+                      <div className="w-full h-6 sm:h-8 bg-gradient-to-b from-stone-800 to-stone-950 rounded-t-xs border-t border-stone-600 shadow-md" />
                     </div>
                   </div>
                 )}
@@ -1053,7 +1308,7 @@ export default function Visualizer({
             </span>
             <span className="text-stone-400 hidden sm:inline">
               {is3DMode
-                ? '*Geser gambar 3D atau ganti warna cat dinding samping di atas'
+                ? '*Geser gambar 3D atau ubah cat samping & suasana lampu di atas'
                 : '*Simulasi pencahayaan & skala proporsional'}
             </span>
           </div>
