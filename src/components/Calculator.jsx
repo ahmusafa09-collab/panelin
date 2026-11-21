@@ -63,6 +63,7 @@ export default function Calculator({
     return 0;
   };
 
+  // Rumus Kebutuhan Panel dengan Efisiensi Potongan Sisa Vertikal
   const hitungKebutuhan = (produk, targetLebarM, targetTinggiM, areaPengurangM2 = 0) => {
     if (!produk || targetLebarM <= 0 || targetTinggiM <= 0) {
       return { jumlah: 0, totalHarga: 0, totalPasang: 0 };
@@ -72,8 +73,22 @@ export default function Calculator({
     const luasPerUnit = lebarPanelM * tinggiPanelM;
 
     const lajurHorizontal = Math.ceil(targetLebarM / lebarPanelM);
-    const tumpukVertikal = Math.ceil(targetTinggiM / tinggiPanelM);
-    const jumlahKotor = lajurHorizontal * tumpukVertikal;
+
+    // Hitung lembar utuh vertikal + efisiensi potongan sisa atas
+    const TOLERANSI = 0.001;
+    const utuhPerLajur = Math.floor((targetTinggiM + TOLERANSI) / tinggiPanelM);
+    const sisaTinggi = Math.max(targetTinggiM - utuhPerLajur * tinggiPanelM, 0);
+
+    let lembarSambunganAtas = 0;
+    if (sisaTinggi > TOLERANSI) {
+      const potonganPerLembar = Math.max(
+        Math.floor((tinggiPanelM + TOLERANSI) / sisaTinggi),
+        1
+      );
+      lembarSambunganAtas = Math.ceil(lajurHorizontal / potonganPerLembar);
+    }
+
+    const jumlahKotor = lajurHorizontal * utuhPerLajur + lembarSambunganAtas;
 
     const penguranganUnit =
       areaPengurangM2 > 0 && luasPerUnit > 0
@@ -787,7 +802,6 @@ export default function Calculator({
             </span>
           </div>
 
-          {/* KARTU LIST TRANSISI / LIST H */}
           {hasNonWpc && (
             <div
               className={`p-3.5 rounded-xl border transition-all duration-300 ${
@@ -878,7 +892,6 @@ export default function Calculator({
             </div>
           )}
 
-          {/* KARTU LIST L / SIKU WPC */}
           {hasWpc && (
             <div
               className={`p-3.5 rounded-xl border transition-all duration-300 ${
