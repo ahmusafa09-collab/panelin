@@ -19,7 +19,10 @@ export default function Visualizer({
 }) {
   const [showTvRoom, setShowTvRoom] = useState(true);
   const [is3DMode, setIs3DMode] = useState(false);
-  const [yawAngle, setYawAngle] = useState(-18); // Sudut pandang (-32° s/d +32°)
+  const [yawAngle, setYawAngle] = useState(-18); // Sudut pandang (-34° s/d +34°)
+  const [sideWallTheme, setSideWallTheme] = useState('krem'); // 'putih' | 'krem' | 'abu'
+  const [isSavingImg, setIsSavingImg] = useState(false);
+
   const dragStartX = useRef(null);
   const dragStartYaw = useRef(0);
 
@@ -91,6 +94,7 @@ export default function Visualizer({
         borderClass: 'border-amber-400/70',
         ringClass: 'ring-amber-400/70',
         dotClass: 'bg-amber-400',
+        hex: '#fbbf24',
       };
     }
     if (listHColor === 'Rosegold') {
@@ -100,6 +104,7 @@ export default function Visualizer({
         borderClass: 'border-rose-300 shadow-[0_0_12px_rgba(251,113,133,0.45)]',
         ringClass: 'ring-rose-300 shadow-[0_0_14px_rgba(251,113,133,0.45)]',
         dotClass: 'bg-rose-300',
+        hex: '#fda4af',
       };
     }
     if (listHColor === 'Hitam') {
@@ -108,6 +113,7 @@ export default function Visualizer({
         borderClass: 'border-stone-950',
         ringClass: 'ring-stone-950',
         dotClass: 'bg-stone-950',
+        hex: '#1c1917',
       };
     }
     return {
@@ -116,8 +122,34 @@ export default function Visualizer({
       borderClass: 'border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]',
       ringClass: 'ring-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.5)]',
       dotClass: 'bg-amber-400',
+      hex: '#f59e0b',
     };
   })();
+
+  // Palet Warna Cat Dinding Samping
+  const sideWallPalette = {
+    putih: {
+      label: 'Putih',
+      dot: 'bg-stone-100 border-stone-400',
+      leftBg: 'linear-gradient(to right, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
+      rightBg: 'linear-gradient(to left, #d6d3d1 0%, #f5f5f4 45%, #ffffff 100%)',
+      ceilingBg: 'linear-gradient(to bottom, #e7e5e4 0%, #f5f5f4 40%, #ffffff 100%)',
+    },
+    krem: {
+      label: 'Krem',
+      dot: 'bg-amber-100 border-amber-400',
+      leftBg: 'linear-gradient(to right, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
+      rightBg: 'linear-gradient(to left, #b8aa96 0%, #dfd5c5 45%, #f3ece1 100%)',
+      ceilingBg: 'linear-gradient(to bottom, #d6cbbd 0%, #ebe3d7 40%, #f7f3ec 100%)',
+    },
+    abu: {
+      label: 'Abu',
+      dot: 'bg-stone-500 border-stone-700',
+      leftBg: 'linear-gradient(to right, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
+      rightBg: 'linear-gradient(to left, #57534e 0%, #8c857e 45%, #b8b2ab 100%)',
+      ceilingBg: 'linear-gradient(to bottom, #a8a29e 0%, #d6d3d1 40%, #e7e5e4 100%)',
+    },
+  }[sideWallTheme];
 
   // Handler Geser Langsung di Layar (Touch / Pointer Drag)
   const handlePointerDown = (e) => {
@@ -129,7 +161,10 @@ export default function Visualizer({
   const handlePointerMove = (e) => {
     if (!is3DMode || dragStartX.current === null) return;
     const deltaX = e.clientX - dragStartX.current;
-    const nextYaw = Math.max(-34, Math.min(34, Math.round(dragStartYaw.current + deltaX * 0.2)));
+    const nextYaw = Math.max(
+      -34,
+      Math.min(34, Math.round(dragStartYaw.current + deltaX * 0.2))
+    );
     setYawAngle(nextYaw);
   };
 
@@ -137,9 +172,200 @@ export default function Visualizer({
     dragStartX.current = null;
   };
 
+  // Fungsi Simpan Preview Dinding ke Gambar PNG Bersih
+  const handleSaveSnapshot = async () => {
+    if (isSavingImg || lebarValid <= 0 || tinggiValid <= 0) return;
+    setIsSavingImg(true);
+
+    const loadImg = (src) =>
+      new Promise((resolve) => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+
+    try {
+      const [outerImg, centerImg] = await Promise.all([
+        loadImg(gambarPanel),
+        activeMix ? loadImg(centerProduct?.gambar2D) : Promise.resolve(null),
+      ]);
+
+      const canvas = document.createElement('canvas');
+      const baseWidth = 1080;
+      const wallW = 960;
+      const wallH = Math.max(Math.min(Math.round(wallW / aspectRatio), 1080), 360);
+      const headerH = 96;
+      const footerH = 74;
+
+      canvas.width = baseWidth;
+      canvas.height = headerH + wallH + footerH;
+      const ctx = canvas.getContext('2d');
+
+      // Latar kartu showroom
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Header judul simulasi
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('PANELIN · Simulasi Desain Dinding', 60, 44);
+
+      ctx.fillStyle = '#d6d3d1';
+      ctx.font = '18px sans-serif';
+      const subTitle = activeMix
+        ? `${activeProduct.kode} + ${centerProduct.kode} · Bidang ${lebarValid}m × ${tinggiValid}m`
+        : `${activeProduct.nama} (${lebarPanelCm}×${tinggiPanelCm}cm) · Bidang ${lebarValid}m × ${tinggiValid}m`;
+      ctx.fillText(subTitle, 60, 74);
+
+      const wx = (baseWidth - wallW) / 2;
+      const wy = headerH;
+
+      // Gambar tekstur panel utama (tiling)
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(wx, wy, wallW, wallH);
+      ctx.clip();
+
+      ctx.fillStyle = '#e7e5e4';
+      ctx.fillRect(wx, wy, wallW, wallH);
+
+      if (outerImg) {
+        const tileW = (lebarPanelPercent / 100) * wallW;
+        const tileH = (tinggiPanelPercent / 100) * wallH;
+        if (tileW > 2 && tileH > 2) {
+          for (let x = wx; x < wx + wallW; x += tileW) {
+            for (let y = wy + wallH - tileH; y > wy - tileH; y -= tileH) {
+              ctx.drawImage(outerImg, x, y, tileW, tileH);
+            }
+          }
+        }
+      }
+
+      // Panel Tengah jika Mode Mix aktif
+      if (activeMix && centerImg) {
+        const cw = (centerWidthPct / 100) * wallW;
+        const ch = (centerHeightPct / 100) * wallH;
+        const cx = wx + (wallW - cw) / 2;
+        const cy = wy + (wallH - ch) / 2;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur = 24;
+        ctx.fillStyle = '#d6d3d1';
+        ctx.fillRect(cx, cy, cw, ch);
+        ctx.restore();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(cx, cy, cw, ch);
+        ctx.clip();
+
+        const cTileW = (centerTileWidthPct / 100) * cw;
+        const cTileH = (centerTileHeightPct / 100) * ch;
+        if (cTileW > 2 && cTileH > 2) {
+          for (let x = cx; x < cx + cw; x += cTileW) {
+            for (let y = cy + ch - cTileH; y > cy - cTileH; y -= cTileH) {
+              ctx.drawImage(centerImg, x, y, cTileW, cTileH);
+            }
+          }
+        }
+        ctx.restore();
+
+        // Garis List H di sekeliling / sisi panel tengah
+        ctx.strokeStyle = listHStyle.hex;
+        ctx.lineWidth = useListH ? 6 : 3;
+        if (isFrameMode) {
+          ctx.strokeRect(cx, cy, cw, ch);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx, cy + ch);
+          ctx.moveTo(cx + cw, cy);
+          ctx.lineTo(cx + cw, cy + ch);
+          ctx.stroke();
+        }
+      }
+
+      // Garis Sambungan Horizontal (> 2.9m)
+      if (isTinggiLebih) {
+        const seamY = wy + wallH - (horizontalSeamPosBottom / 100) * wallH;
+        ctx.strokeStyle = useListH ? listHStyle.hex : '#fbbf24';
+        ctx.lineWidth = useListH ? 6 : 2;
+        if (!useListH) ctx.setLineDash([10, 8]);
+        ctx.beginPath();
+        ctx.moveTo(wx, seamY);
+        ctx.lineTo(wx + wallW, seamY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Bukaan Pintu / Jendela
+      openings.forEach((item) => {
+        const opW = Math.max(Number(item.lebar) || 0, 0);
+        const opH = Math.max(Number(item.tinggi) || 0, 0);
+        const opLeft = Math.max(Number(item.jarakKiri) || 0, 0);
+        const opBottom = Math.max(Number(item.jarakBawah) || 0, 0);
+        if (opW <= 0 || opH <= 0) return;
+
+        const ow = Math.min(opW / lebarValid, 1) * wallW;
+        const oh = Math.min(opH / tinggiValid, 1) * wallH;
+        const ox = wx + Math.min(opLeft / lebarValid, 1) * wallW;
+        const oy = wy + wallH - Math.min(opBottom / tinggiValid, 1) * wallH - oh;
+
+        ctx.fillStyle = opBottom > 0 ? '#e0f2fe' : '#e7e5e4';
+        ctx.fillRect(ox, oy, ow, oh);
+        ctx.strokeStyle = '#292524';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(ox, oy, ow, oh);
+
+        ctx.fillStyle = '#1c1917';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${item.nama} (${opW}×${opH}m)`, ox + ow / 2, oy + oh / 2 + 6);
+        ctx.textAlign = 'left';
+      });
+
+      ctx.restore();
+
+      // Lantai kayu bawah
+      ctx.fillStyle = '#6b4930';
+      ctx.fillRect(wx, wy + wallH, wallW, 18);
+
+      // Footer info
+      ctx.fillStyle = '#a8a29e';
+      ctx.font = '15px sans-serif';
+      const aksesorisText = [
+        useListH ? `List H ${listHColor}` : null,
+        useListLWpc ? 'List L WPC' : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      ctx.fillText(
+        aksesorisText
+          ? `Aksesoris: ${aksesorisText}`
+          : 'Simulasi visual proporsional PANELIN Showroom Studio',
+        60,
+        canvas.height - 26
+      );
+
+      const link = document.createElement('a');
+      link.download = `PANELIN-${activeProduct.kode}-${lebarValid}x${tinggiValid}m.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      setIsSavingImg(false);
+    }
+  };
+
   const activeYaw = is3DMode ? yawAngle : 0;
   const directionalShade = activeYaw / 38;
-  const roomDepth = isCompact ? 130 : 240; // Kedalaman lorong ruangan 3D (px)
+  const roomDepth = isCompact ? 130 : 240;
+
+  const isOuterWpc = activeProduct.tipe === 'WPC';
+  const isCenterWpc = activeMix && centerProduct?.tipe === 'WPC';
 
   return (
     <div className="w-full flex flex-col items-center justify-center select-none">
@@ -186,6 +412,7 @@ export default function Visualizer({
 
         {/* Grup Tombol Kanan */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Switch 2D vs 3D Ruangan */}
           <div className="flex items-center rounded-xl bg-stone-200/90 p-0.5 border border-stone-300/70">
             <button
               type="button"
@@ -215,10 +442,43 @@ export default function Visualizer({
             </button>
           </div>
 
+          {/* Tombol Simpan Gambar Preview */}
+          {!isCompact && (
+            <button
+              type="button"
+              onClick={handleSaveSnapshot}
+              disabled={isSavingImg}
+              title="Simpan gambar simulasi untuk dikirim ke klien"
+              className="min-h-[40px] sm:min-h-[42px] px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 transition cursor-pointer shadow-2xs flex items-center gap-1.5"
+            >
+              <svg
+                className="w-3.5 h-3.5 text-amber-600 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span className="hidden sm:inline">
+                {isSavingImg ? 'Menyimpan...' : 'Simpan Gambar'}
+              </span>
+            </button>
+          )}
+
+          {/* Tombol Pin/Lepas Sticky khusus Layar HP */}
           <button
             type="button"
             onClick={onToggleMobileSticky}
-            title={isMobileSticky ? 'Lepas preview dari atas layar' : 'Kunci preview di atas layar'}
+            title={
+              isMobileSticky
+                ? 'Lepas preview dari atas layar'
+                : 'Kunci preview di atas layar'
+            }
             className={`lg:hidden ${
               isCompact ? 'min-h-[34px] px-2' : 'min-h-[40px] px-2.5'
             } rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center gap-1 ${
@@ -241,6 +501,7 @@ export default function Visualizer({
             </svg>
           </button>
 
+          {/* Tombol Toggle Furnitur TV */}
           <button
             type="button"
             onClick={() => setShowTvRoom((prev) => !prev)}
@@ -272,20 +533,21 @@ export default function Visualizer({
         </div>
       </div>
 
-      {/* ── Panel Kontrol Putar Sudut 3D ── */}
+      {/* ── Panel Kontrol Putar Sudut 3D + Pilihan Warna Cat Dinding Samping ── */}
       {is3DMode && !isCompact && (
-        <div className="w-full max-w-xl mb-2.5 px-3 py-2 rounded-xl bg-stone-900 text-stone-200 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
-          <div className="flex items-center gap-1.5">
+        <div className="w-full max-w-xl mb-2.5 px-3 py-2 rounded-xl bg-stone-900 text-stone-200 flex flex-wrap items-center justify-between gap-2.5 text-xs shadow-xs">
+          {/* Preset Sudut */}
+          <div className="flex items-center gap-1">
             {[
-              { label: 'Sudut Kiri', val: -26 },
-              { label: 'Tengah', val: 0 },
-              { label: 'Sudut Kanan', val: 26 },
+              { label: 'Kiri', val: -26 },
+              { label: 'Depan', val: 0 },
+              { label: 'Kanan', val: 26 },
             ].map((preset) => (
               <button
                 key={preset.label}
                 type="button"
                 onClick={() => setYawAngle(preset.val)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                   yawAngle === preset.val
                     ? 'bg-amber-400 text-stone-950'
                     : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
@@ -296,8 +558,30 @@ export default function Visualizer({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 flex-1 min-w-[150px] max-w-[240px]">
-            <span className="text-[10px] text-stone-400 shrink-0">Putar:</span>
+          {/* Pilihan Warna Tembok Samping */}
+          <div className="flex items-center gap-1.5 bg-stone-800/90 px-2 py-1 rounded-lg border border-stone-700">
+            <span className="text-[10px] text-stone-400">Cat Samping:</span>
+            {[
+              { key: 'putih', label: 'Putih', cls: 'bg-white' },
+              { key: 'krem', label: 'Krem', cls: 'bg-amber-100' },
+              { key: 'abu', label: 'Abu', cls: 'bg-stone-500' },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setSideWallTheme(t.key)}
+                title={`Warna Dinding Samping: ${t.label}`}
+                className={`w-4 h-4 rounded-full border cursor-pointer transition ${t.cls} ${
+                  sideWallTheme === t.key
+                    ? 'ring-2 ring-amber-400 scale-110 border-stone-900'
+                    : 'border-stone-500 opacity-75 hover:opacity-100'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Slider Sudut */}
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px] max-w-[200px]">
             <input
               type="range"
               min="-34"
@@ -386,30 +670,28 @@ export default function Visualizer({
                 : undefined
             }
           >
-            {/* ══════════ KOTAK RUANGAN 3D SEJATI (DINDING MUNDUR KE DALAM) ══════════ */}
+            {/* ══════════ KOTAK RUANGAN 3D SEJATI ══════════ */}
             <div
               className="w-full flex flex-col relative transition-transform duration-200 ease-out"
               style={
                 is3DMode
                   ? {
                       transformStyle: 'preserve-3d',
-                      // Dorong dinding utama masuk ke dalam ruangan (-150px) agar plafon, lantai & dinding samping terbuka membentuk lorong perspektif
                       transform: `translateZ(-${roomDepth * 0.65}px) rotateY(${activeYaw}deg)`,
                     }
                   : undefined
               }
             >
-              {/* 1. PLAFON RUANGAN 3D (Engsel Atas dilipat +90deg menjulur maju ke kamera) */}
+              {/* 1. PLAFON RUANGAN 3D */}
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 left-0 right-0 origin-top pointer-events-none flex items-center justify-around border-b border-stone-400/50"
+                  className="absolute top-0 left-0 right-0 origin-top pointer-events-none flex items-center justify-around border-b border-stone-400/50 transition-colors duration-300"
                   style={{
                     height: `${roomDepth}px`,
                     transform: 'rotateX(90deg)',
-                    background:
-                      'linear-gradient(to bottom, #a8a29e 0%, #d6d3d1 35%, #f5f5f4 100%)',
-                    boxShadow: 'inset 0 28px 45px rgba(0,0,0,0.45)',
+                    background: sideWallPalette.ceilingBg,
+                    boxShadow: 'inset 0 28px 45px rgba(0,0,0,0.4)',
                   }}
                 >
                   <span className="w-8 h-3 rounded-full bg-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.95)]" />
@@ -418,45 +700,41 @@ export default function Visualizer({
                 </div>
               )}
 
-              {/* 2. DINDING SAMPING KIRI 3D (Engsel Kiri dilipat -90deg menjulur maju ke kamera) */}
+              {/* 2. DINDING SAMPING KIRI 3D */}
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 bottom-0 left-0 origin-left pointer-events-none"
+                  className="absolute top-0 bottom-0 left-0 origin-left pointer-events-none transition-colors duration-300"
                   style={{
                     width: `${roomDepth}px`,
                     transform: 'rotateY(-90deg)',
-                    background:
-                      'linear-gradient(to right, #78716c 0%, #a8a29e 35%, #d6d3d1 100%)',
-                    boxShadow: 'inset 32px 0 48px rgba(0,0,0,0.55)',
+                    background: sideWallPalette.leftBg,
+                    boxShadow: 'inset 32px 0 48px rgba(0,0,0,0.48)',
                   }}
                 >
-                  {/* Lis Plafon & Plint Lantai di Dinding Kiri */}
                   <div className="w-full h-3 bg-stone-200/90 border-b border-stone-400" />
                   <div className="w-full h-4 bg-stone-900 border-t border-stone-700 absolute bottom-0" />
                 </div>
               )}
 
-              {/* 3. DINDING SAMPING KANAN 3D (Engsel Kanan dilipat +90deg menjulur maju ke kamera) */}
+              {/* 3. DINDING SAMPING KANAN 3D */}
               {is3DMode && (
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 bottom-0 right-0 origin-right pointer-events-none"
+                  className="absolute top-0 bottom-0 right-0 origin-right pointer-events-none transition-colors duration-300"
                   style={{
                     width: `${roomDepth}px`,
                     transform: 'rotateY(90deg)',
-                    background:
-                      'linear-gradient(to left, #78716c 0%, #a8a29e 35%, #d6d3d1 100%)',
-                    boxShadow: 'inset -32px 0 48px rgba(0,0,0,0.55)',
+                    background: sideWallPalette.rightBg,
+                    boxShadow: 'inset -32px 0 48px rgba(0,0,0,0.48)',
                   }}
                 >
-                  {/* Lis Plafon & Plint Lantai di Dinding Kanan */}
                   <div className="w-full h-3 bg-stone-200/90 border-b border-stone-400" />
                   <div className="w-full h-4 bg-stone-900 border-t border-stone-700 absolute bottom-0" />
                 </div>
               )}
 
-              {/* Plafon 2D (Hanya di mode 2D) */}
+              {/* Plafon 2D */}
               {!is3DMode && (
                 <div
                   className={`${
@@ -469,7 +747,7 @@ export default function Visualizer({
                 </div>
               )}
 
-              {/* 4. BIDANG DINDING UTAMA PANEL (Dinding Belakang Ruangan) */}
+              {/* 4. BIDANG DINDING UTAMA PANEL */}
               <div
                 className={`w-full ${
                   isCompact ? 'max-h-[155px]' : 'max-h-[340px] sm:max-h-[390px]'
@@ -489,6 +767,18 @@ export default function Visualizer({
                       backgroundPosition: 'left bottom',
                     }}
                   >
+                    {/* Efek Relief Kisi-Kisi WPC untuk Panel Luar */}
+                    {is3DMode && isOuterWpc && (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
+                        }}
+                      />
+                    )}
+
+                    {/* Panel Fokus Tengah */}
                     <div
                       className={`relative transition-all duration-500 ${
                         is3DMode
@@ -509,6 +799,17 @@ export default function Visualizer({
                         transform: is3DMode ? 'translateZ(10px)' : undefined,
                       }}
                     >
+                      {/* Efek Relief Kisi-Kisi WPC jika Panel Tengah adalah WPC */}
+                      {is3DMode && isCenterWpc && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            backgroundImage:
+                              'repeating-linear-gradient(90deg, rgba(0,0,0,0.36) 0px, transparent 3px, rgba(255,255,255,0.14) 6px, rgba(0,0,0,0.36) 11px)',
+                          }}
+                        />
+                      )}
+
                       <div
                         className="absolute inset-0 pointer-events-none"
                         style={{
@@ -528,6 +829,17 @@ export default function Visualizer({
                       backgroundPosition: 'left bottom',
                     }}
                   >
+                    {/* Efek Relief Kisi-Kisi 3D Khusus WPC */}
+                    {is3DMode && isOuterWpc && (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(90deg, rgba(0,0,0,0.34) 0px, transparent 3px, rgba(255,255,255,0.12) 6px, rgba(0,0,0,0.34) 11px)',
+                        }}
+                      />
+                    )}
+
                     {verticalSeams.map(({ pos, nomor }) => (
                       <div
                         key={nomor}
@@ -680,7 +992,7 @@ export default function Visualizer({
                 )}
               </div>
 
-              {/* 5. LANTAI KAYU RUANGAN 3D (Engsel Bawah dilipat -90deg menjulur maju ke kamera) */}
+              {/* 5. LANTAI KAYU RUANGAN 3D */}
               {is3DMode ? (
                 <div
                   aria-hidden="true"
@@ -741,7 +1053,7 @@ export default function Visualizer({
             </span>
             <span className="text-stone-400 hidden sm:inline">
               {is3DMode
-                ? '*Geser langsung gambar 3D atau gunakan slider untuk menengok sudut ruangan'
+                ? '*Geser gambar 3D atau ganti warna cat dinding samping di atas'
                 : '*Simulasi pencahayaan & skala proporsional'}
             </span>
           </div>
